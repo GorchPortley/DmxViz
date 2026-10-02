@@ -2,12 +2,15 @@
 // The 3D renderer: stage geometry, fixture bodies, surface lighting from every
 // beam (with gobos), volumetric haze beams, lens glow, bloom and tonemapping.
 //
-// OWNER: render work stream (WS3). See docs/ARCHITECTURE.md "Rendering".
+// OWNER: render work stream (WS3). See docs/ARCHITECTURE.md "Rendering" and
+// src/render/README.md for the pass list, formats and costs.
 //
 // Threading: main thread only, after sg_setup(). Call render() outside any
-// sokol pass; it records its own offscreen passes.
+// sokol pass; it records its own offscreen passes. Render each viewport at most
+// once per frame (its per-frame buffers can be updated only once).
 
 #include "render/RenderScene.h"
+#include "render/RenderSettings.h"
 
 #include <cstdint>
 #include <memory>
@@ -18,9 +21,9 @@ class AssetLibrary;
 
 namespace dmxviz::render {
 
-// The offscreen images for one 3D viewport. The UI shows colorTexture() with
-// ImGui::Image(). Resizing is cheap to request every frame: it only reallocates
-// when the size actually changes.
+// The offscreen images for one 3D viewport. The UI shows imguiTexture() with
+// ImGui::Image() (default uv0/uv1: the image is stored top row first). Resizing
+// is cheap to request every frame: it only reallocates when the size changes.
 class ViewportTarget {
 public:
     ViewportTarget();
@@ -55,6 +58,10 @@ public:
                 const assets::AssetLibrary& assets);
 
     const RenderStats& stats() const;
+
+    // Quality/performance tunables; may be changed between frames.
+    RenderSettings& settings();
+    const RenderSettings& settings() const;
 
 private:
     struct Impl;

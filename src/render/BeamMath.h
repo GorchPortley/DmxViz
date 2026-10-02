@@ -206,6 +206,17 @@ inline bool hullOutsideFrustum(const Frustum& f, const glm::vec3& lensPos, const
     return false;
 }
 
+// Box outside if, for some plane, even its corner furthest along the plane normal is outside.
+inline bool aabbOutsideFrustum(const Frustum& f, const Aabb& box) {
+    if (box.empty()) return true;
+    for (const Plane& pl : f) {
+        const glm::vec3 corner{pl.normal.x >= 0.0f ? box.max.x : box.min.x, pl.normal.y >= 0.0f ? box.max.y : box.min.y,
+                            pl.normal.z >= 0.0f ? box.max.z : box.min.z};
+        if (glm::dot(pl.normal, corner) + pl.d < 0.0f) return true;
+    }
+    return false;
+}
+
 inline bool sphereOutsideFrustum(const Frustum& f, const glm::vec3& centre, float radius) {
     for (const Plane& pl : f) {
         if (glm::dot(pl.normal, centre) + pl.d < -radius) return true;
