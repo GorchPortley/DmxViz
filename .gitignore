@@ -1,0 +1,11 @@
+build*/
+out/
+.vs/
+.vscode/
+.idea/
+*.user
+compile_commands.json
+dmxviz_layout.ini
+imgui.ini
+/screenshots/
+.cache/

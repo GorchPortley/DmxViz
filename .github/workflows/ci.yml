@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-gcc
+            os: ubuntu-24.04
+          - name: windows-msvc
+            os: windows-2022
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build libgl-dev libx11-dev libxi-dev libxcursor-dev xvfb mesa-utils
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: deps-${{ matrix.name }}-${{ hashFiles('cmake/Dependencies.cmake') }}
+
+      - name: Configure (Linux)
+        if: runner.os == 'Linux'
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDMXVIZ_WARNINGS_AS_ERRORS=ON
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        run: cmake -S . -B build -DDMXVIZ_WARNINGS_AS_ERRORS=ON
+
+      - name: Build
+        run: cmake --build build --config RelWithDebInfo --parallel
+
+      - name: Unit tests
+        run: ctest --test-dir build -C RelWithDebInfo --output-on-failure
+
+      - name: Smoke test (headless screenshot)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p screenshots
+          xvfb-run -a -s "-screen 0 1600x900x24" ./build/src/app/dmxviz --screenshot screenshots/app.png
+          if [ -x build/tools/render_sandbox/render_sandbox ]; then
+            xvfb-run -a -s "-screen 0 1600x900x24" ./build/tools/render_sandbox/render_sandbox --screenshot screenshots/sandbox.png
+          fi
+
+      - name: Upload screenshots
+        if: runner.os == 'Linux' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshots/
+          if-no-files-found: ignore
