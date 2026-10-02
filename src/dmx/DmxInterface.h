@@ -58,7 +58,7 @@ public:
     virtual void send(UniverseId universe, const UniverseData& data) = 0;
     // Type-specific settings. Common fields (label, enabled, input) are saved by DmxManager.
     virtual nlohmann::json saveConfig() const = 0;
-    virtual bool loadConfig(const nlohmann::json& config, std::string& error) = 0;
+    virtual bool loadConfig(const nlohmann::json& settings, std::string& error) = 0;
     // One line for lists, e.g. "Art-Net on 192.168.1.10:6454".
     virtual std::string summary() const { return typeName(); }
 

@@ -20,7 +20,7 @@ public:
     void stop() override;
     void send(UniverseId universe, const UniverseData& data) override;
     nlohmann::json saveConfig() const override;
-    bool loadConfig(const nlohmann::json& config, std::string& error) override;
+    bool loadConfig(const nlohmann::json& settings, std::string& error) override;
     std::string summary() const override;
 
     int universeOffset() const { return universeOffset_; }

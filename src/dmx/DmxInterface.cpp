@@ -2,7 +2,17 @@
 
 #include "core/Log.h"
 
+#include <format>
+
 namespace dmxviz::dmx {
+namespace {
+
+// "Art-Net 'Stage left'" or just "Art-Net" for log lines.
+std::string logName(const std::string& type, const std::string& label) {
+    return label.empty() ? type : std::format("{} '{}'", type, label);
+}
+
+}  // namespace
 
 InterfaceStatus DmxInterface::status() const {
     InterfaceStatus s;
@@ -29,7 +39,7 @@ void DmxInterface::setLabel(std::string text) {
 }
 
 void DmxInterface::setRunning(std::string message) {
-    log::info("dmx", "{} '{}': {}", typeName(), label(), message);
+    log::info("dmx", "{}: {}", logName(typeName(), label()), message);
     std::lock_guard lock(statusMutex_);
     message_ = std::move(message);
     state_.store(InterfaceState::Running);
@@ -42,7 +52,7 @@ void DmxInterface::setStopped() {
 }
 
 void DmxInterface::setError(std::string message) {
-    log::warn("dmx", "{} '{}': {}", typeName(), label(), message);
+    log::warn("dmx", "{}: {}", logName(typeName(), label()), message);
     std::lock_guard lock(statusMutex_);
     message_ = std::move(message);
     state_.store(InterfaceState::Error);

@@ -34,9 +34,9 @@ void LoopbackInterface::send(UniverseId universe, const UniverseData& data) {
 
 nlohmann::json LoopbackInterface::saveConfig() const { return {{"universeOffset", universeOffset_}}; }
 
-bool LoopbackInterface::loadConfig(const nlohmann::json& config, std::string& error) {
+bool LoopbackInterface::loadConfig(const nlohmann::json& settings, std::string& error) {
     try {
-        universeOffset_ = config.value("universeOffset", 0);
+        universeOffset_ = settings.value("universeOffset", 0);
         return true;
     } catch (const nlohmann::json::exception& e) {
         error = e.what();
