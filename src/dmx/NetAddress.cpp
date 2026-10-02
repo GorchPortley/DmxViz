@@ -32,4 +32,23 @@ std::optional<Ipv4Address> Ipv4Address::parse(std::string_view text) {
 
 std::string Endpoint::toString() const { return std::format("{}:{}", address.toString(), port); }
 
+std::optional<Endpoint> Endpoint::parse(std::string_view text, std::uint16_t defaultPort) {
+    Endpoint result;
+    result.port = defaultPort;
+    const std::size_t colon = text.find(':');
+    if (colon != std::string_view::npos) {
+        const std::string_view portText = text.substr(colon + 1);
+        unsigned port = 0;
+        const auto [next, ec] = std::from_chars(portText.data(), portText.data() + portText.size(), port);
+        if (portText.empty() || ec != std::errc() || next != portText.data() + portText.size() || port > 65535)
+            return std::nullopt;
+        result.port = static_cast<std::uint16_t>(port);
+        text = text.substr(0, colon);
+    }
+    const auto address = Ipv4Address::parse(text);
+    if (!address) return std::nullopt;
+    result.address = *address;
+    return result;
+}
+
 }  // namespace dmxviz::dmx

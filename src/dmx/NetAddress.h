@@ -46,6 +46,8 @@ struct Endpoint {
     std::uint16_t port = 0;
 
     std::string toString() const;  // "192.168.1.20:6454"
+    // Parses "a.b.c.d" (port = defaultPort) or "a.b.c.d:port".
+    static std::optional<Endpoint> parse(std::string_view text, std::uint16_t defaultPort);
     auto operator<=>(const Endpoint&) const = default;
 };
 
