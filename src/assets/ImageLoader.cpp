@@ -8,18 +8,11 @@
 #include <string>
 #include <vector>
 
-#define STB_IMAGE_IMPLEMENTATION
-#define STBI_NO_HDR
-#define STBI_NO_PIC
-#define STBI_NO_PNM
+// Implementations are compiled in third_party/single_header_impls.c.
 #include "stb_image.h"
-
-#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
-
-#define NANOSVG_IMPLEMENTATION
+#include <cstdio>
 #include "nanosvg.h"
-#define NANOSVGRAST_IMPLEMENTATION
 #include "nanosvgrast.h"
 
 namespace dmxviz::assets {
