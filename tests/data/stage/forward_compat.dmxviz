@@ -1,0 +1,41 @@
+{
+  "formatVersion": 2,
+  "ledWalls": { "panels": 12, "note": "top-level block from a newer DmxViz" },
+  "environment": { "hazeDensity": 0.4, "exposure": 1.5 },
+  "dmx": { "interfaces": [ { "type": "Art-Net", "universeOffset": 0 } ] },
+  "fixtureTypes": [
+    { "id": "generic/rgb-par" },
+    { "id": "acme/spot-700", "path": "fixtures/acme-spot.dmxviz-fixture.json" }
+  ],
+  "scene": {
+    "nextNodeId": 100,
+    "layers": [ { "name": "Default" }, { "name": "Video", "visible": false } ],
+    "nodes": [
+      {
+        "id": 5,
+        "kind": "ledScreen",
+        "name": "Upstage wall",
+        "layer": 1,
+        "ledScreen": { "pixelPitch": 3.9, "columns": 16, "rows": 9 },
+        "transform": { "position": [0, 3, -6], "rotationDeg": [0, 90, 0] },
+        "children": [
+          { "id": 6, "kind": "primitive", "name": "Frame", "primitive": { "shape": "box", "size": [8, 0.1, 0.1] } }
+        ]
+      },
+      {
+        "id": 7,
+        "kind": "truss",
+        "name": "Hand written truss",
+        "futureField": "ignored",
+        "truss": { "profile": { "name": "F44" }, "piece": "spiral", "straight": { "length": 6 } },
+        "transform": { "position": [0, 7, 0] }
+      },
+      { "id": 7, "kind": "group", "name": "Duplicate id" },
+      {
+        "kind": "fixture",
+        "name": "No id",
+        "fixture": { "fixtureTypeId": "generic/rgb-par", "patch": { "universe": 2, "address": 101 } }
+      }
+    ]
+  }
+}
