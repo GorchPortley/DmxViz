@@ -9,3 +9,6 @@ dmxviz_layout.ini
 imgui.ini
 /screenshots/
 .cache/
+
+# Local agent worktrees
+.claude/worktrees/
