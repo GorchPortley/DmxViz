@@ -28,6 +28,9 @@ SandboxOptions parseSandboxOptions(int argc, char** argv) {
             o.frames = std::atoi(next());
         } else if (a == "--beams") {
             o.stressBeams = std::atoi(next());
+            o.rig = "stress";
+        } else if (a == "--rig") {
+            o.rig = next();
         } else if (a == "--haze") {
             o.haze = static_cast<float>(std::atof(next()));
         } else if (a == "--camera") {
@@ -62,7 +65,10 @@ void SandboxApp::init() {
     if (!renderer_.init()) log::error("sandbox", "renderer failed to initialise");
     viewport_ = std::make_unique<render::ViewportTarget>();
 
-    stage_.build(assets_, options_.stressBeams);
+    DemoStage::Rig rig = DemoStage::Rig::Show;
+    if (options_.rig == "single") rig = DemoStage::Rig::Single;
+    if (options_.rig == "stress") rig = DemoStage::Rig::Stress;
+    stage_.build(assets_, rig, options_.stressBeams > 0 ? options_.stressBeams : 1000);
     scene_.environment.hazeDensity = options_.haze;
     scene_.environment.hazeVariation = 0.35f;
     scene_.environment.ambient = glm::vec3(0.012f, 0.012f, 0.016f);
@@ -81,6 +87,9 @@ render::Camera SandboxApp::makeCamera(int width, int height) const {
     } else if (options_.camera == "side") {
         eye = {17.0f, 3.5f, 3.0f};
         target = {0.0f, 4.0f, -3.0f};
+    } else if (options_.camera == "close") {
+        eye = {6.5f, 2.2f, 4.5f};
+        target = {0.0f, 2.2f, -1.0f};
     } else if (options_.camera == "top") {
         eye = {0.0f, 26.0f, 7.0f};
         target = {0.0f, 0.0f, -3.0f};

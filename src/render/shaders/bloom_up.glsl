@@ -1,8 +1,10 @@
 // ============================================================================
 // bloom_up.glsl - one step of the bloom upsample chain: the smaller level is
-// blurred with a 3x3 tent filter and ADDED (blend ONE, ONE) to the next larger
-// level. After the last step level 0 holds the sum of all six blur radii,
-// a wide soft glow with a bright tight core, much like a camera lens.
+// blurred with a 3x3 tent filter, scaled by kScatter and ADDED (blend ONE,
+// ONE) to the next larger level. After the last step level 0 holds all six
+// blur radii, each wider one weaker (kScatter^k): a bright tight core with a
+// soft falloff, much like the glare of a camera lens. composite.glsl divides
+// by the sum of the weights.
 // ============================================================================
 
 #ifdef VERTEX_SHADER
@@ -16,6 +18,8 @@ void main() {
 uniform sampler2D u_source;
 uniform vec4 u_params;  // xy = source texel size, zw = target texel size
 
+const float kScatter = 0.65;  // keep in sync with kBloomWeightSum in composite.glsl
+
 out vec4 o_color;
 
 void main() {
@@ -26,6 +30,6 @@ void main() {
             texture(u_source, uv + vec2(0.0, -t.y)).rgb + texture(u_source, uv + vec2(0.0, t.y)).rgb) * 2.0;
     sum += texture(u_source, uv + vec2(-t.x, -t.y)).rgb + texture(u_source, uv + vec2(t.x, -t.y)).rgb +
            texture(u_source, uv + vec2(-t.x, t.y)).rgb + texture(u_source, uv + vec2(t.x, t.y)).rgb;
-    o_color = vec4(sum / 16.0, 1.0);
+    o_color = vec4(sum / 16.0 * kScatter, 1.0);
 }
 #endif

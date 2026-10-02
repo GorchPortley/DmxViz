@@ -27,7 +27,8 @@ uniform vec4 u_params;        // x = bloom on (0/1), y = tonemapper (0 hue-prese
 
 out vec4 o_color;
 
-const float kBloomLevels = 6.0;
+// Sum of the level weights 1 + s + s^2 + ... + s^5 with s = kScatter (bloom_up.glsl).
+const float kBloomWeightSum = (1.0 - 0.075418890625) / (1.0 - 0.65);
 const vec3 kSelectedColor = vec3(1.0, 0.55, 0.12);
 const vec3 kHoverColor = vec3(0.35, 0.75, 1.0);
 
@@ -63,7 +64,7 @@ void main() {
 
     if (u_params.x > 0.5) {
         // Energy-preserving mix: bloom redistributes light, it does not add any.
-        vec3 bloom = texture(u_bloom, uv).rgb / kBloomLevels;
+        vec3 bloom = texture(u_bloom, uv).rgb / kBloomWeightSum;
         color = mix(color, bloom, frame.params2.y);
     }
     color *= frame.ambientExposure.w;

@@ -7,8 +7,10 @@
 //     illuminance the lens produces at the camera, spread over the disc's
 //     on-screen size (at least one pixel, so distant fixtures still sparkle);
 //   * halo: a soft glare ring, a small fraction of the same energy.
-// Both scale with the beam profile at the viewing angle, so a lens glows when
-// the beam points at the camera and is dark from the side or behind.
+// Both scale with the beam profile at the viewing angle, so a lens blazes when
+// the beam points at the camera. Seen from outside the beam a real lens still
+// looks lit (stray light inside the optics); kStrayLight keeps that share of
+// the axis intensity visible over the whole front hemisphere.
 // Occlusion is tested in the vertex shader against the scene distance around
 // the lens (a few taps -> soft fade instead of popping).
 // ============================================================================
@@ -27,18 +29,22 @@ layout(std430, binding = 2) readonly buffer Glows {
     Glow glows[];
 };
 
-// Fraction of the lens energy that goes into the halo, and the halo size
-// relative to the core (in pixels: max(coreRadius * scale, minimum)).
-const float kHaloEnergy = 0.06;
-const float kHaloScale = 3.0;
-const float kHaloMinPixels = 3.0;
-const float kHaloExtent = 5.0;  // sprite half size in halo radii (the falloff is < 0.3 % there)
-const float kMaxCoreRadiance = 20000.0;  // HDR units; keeps fp16 targets far from overflow
+// Fraction of the lens energy that goes into the halo and the halo size: a
+// few times the lens, but at least kHaloMinAngle (radians) so even distant
+// fixtures get a visible glow.
+const float kHaloEnergy = 0.03;
+const float kHaloScale = 4.0;
+const float kHaloMinAngle = 0.008;
+const float kHaloExtent = 5.0;            // sprite half size in halo radii
+const float kMaxCoreRadiance = 20000.0;   // HDR units; keeps fp16 targets far from overflow
+const float kMaxHaloRadiance = 6.0;       // HDR units; a looked-into beam must not white out the frame
+const float kStrayLight = 1.5e-4;         // fraction of the axis intensity seen off-axis
 
 #ifdef VERTEX_SHADER
 uniform sampler2D u_gDistance;
 
 out vec2 v_offsetPx;         // pixel offset from the lens centre
+flat out float v_extentPx;   // sprite half size
 flat out vec3 v_core;        // core radiance (HDR units)
 flat out vec3 v_halo;        // halo peak radiance (HDR units)
 flat out vec2 v_radiiPx;     // x = core radius, y = halo scale (pixels)
@@ -70,6 +76,7 @@ void main() {
     float cosAngle = dot(g.dirTanBeam.xyz, v);
     float t = cosAngle > 1e-3 ? sqrt(max(1.0 - cosAngle * cosAngle, 0.0)) / cosAngle : 1e6;
     float f = t < g.misc.x ? exp2(-pow(max(t / g.dirTanBeam.w, 1e-6), g.radiance.w)) : 0.0;
+    f = max(f, kStrayLight * smoothstep(0.0, 0.4, cosAngle));
 
     bool inFront;
     vec2 uv = worldToUv(g.posRadius.xyz, inFront);
@@ -87,9 +94,11 @@ void main() {
     float peak = max(core.r, max(core.g, core.b));
     if (peak > kMaxCoreRadiance) core *= kMaxCoreRadiance / peak;
 
-    float haloPx = max(coreRadiusPx * kHaloScale, kHaloMinPixels);
+    float haloPx = max(coreRadiusPx * kHaloScale, kHaloMinAngle * focalPx);
     float haloSolidAngle = PI * haloPx * haloPx * pixelAngle * pixelAngle;  // integral of the falloff below
     v_halo = illuminance * kHaloEnergy / haloSolidAngle;
+    float haloPeak = max(v_halo.r, max(v_halo.g, v_halo.b));
+    if (haloPeak > kMaxHaloRadiance) v_halo *= kMaxHaloRadiance / haloPeak;
     v_core = core * (1.0 - kHaloEnergy);
     v_radiiPx = vec2(coreRadiusPx, haloPx);
 
@@ -98,6 +107,7 @@ void main() {
     vec2 corner = corners[gl_VertexID];
     float halfSizePx = max(haloPx * kHaloExtent, coreRadiusPx + 2.0);
     v_offsetPx = corner * halfSizePx;
+    v_extentPx = halfSizePx;
 
     vec2 clipXY = (uv + corner * halfSizePx * frame.viewport.zw) * 2.0 - 1.0;
     // Invisible sprites collapse to a degenerate quad (nothing rasterised).
@@ -107,6 +117,7 @@ void main() {
 
 #ifdef FRAGMENT_SHADER
 in vec2 v_offsetPx;
+flat in float v_extentPx;
 flat in vec3 v_core;
 flat in vec3 v_halo;
 flat in vec2 v_radiiPx;
@@ -120,6 +131,7 @@ void main() {
     // Halo: 1 / (1 + x^2)^2 integrates to pi * scale^2, matching haloSolidAngle.
     float x = r / v_radiiPx.y;
     float halo = 1.0 / ((1.0 + x * x) * (1.0 + x * x));
+    halo *= 1.0 - smoothstep(0.6 * v_extentPx, v_extentPx, r);  // reach exactly 0 at the sprite edge
     o_color = vec4(v_core * core + v_halo * halo, 0.0);
 }
 #endif

@@ -33,9 +33,6 @@ void main() {
     ivec2 centre = ivec2(halfPos);
     ivec2 maxTexel = ivec2(frame.halfViewport.xy) - 1;
 
-    // Depth tolerance grows with distance (relative precision) plus a little slack.
-    float tolerance = 0.03 * depth + 0.05;
-
     vec3 sum = vec3(0.0);
     float weightSum = 0.0;
     vec3 nearest = vec3(0.0);
@@ -48,8 +45,10 @@ void main() {
 
             vec2 offset = (vec2(texel) + 0.5) - halfPos;
             float spatial = exp(-dot(offset, offset) * 0.9);
-            float diff = abs(sampleDepth - depth);
-            float range = 1.0 / (1.0 + (diff / tolerance) * (diff / tolerance) * 4.0);
+            // Relative difference, measured against the NEARER of the two depths so
+            // that sky pixels (distance 1e9) do not accept a truss texel as similar.
+            float diff = abs(sampleDepth - depth) / max(min(sampleDepth, depth), 0.1);
+            float range = 1.0 / (1.0 + diff * diff * 4000.0);  // ~0.5 at 1.6 % difference
             float w = spatial * range;
             sum += value * w;
             weightSum += w;
@@ -59,8 +58,9 @@ void main() {
             }
         }
     }
-    // If no neighbour has a matching depth, take the one that matches best.
-    vec3 result = weightSum > 1e-3 ? sum / weightSum : nearest;
+    // If no neighbour has a matching depth (thin geometry inside one half-res
+    // texel), take the one that matches best instead of a blurred mismatch.
+    vec3 result = weightSum > 0.05 ? sum / weightSum : nearest;
     o_color = vec4(result, 0.0);
 }
 #endif

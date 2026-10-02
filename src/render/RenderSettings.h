@@ -18,7 +18,8 @@ struct RenderSettings {
     int minMarchSteps = 6;          // per beam per pixel; small/distant beams use the minimum
     int maxMarchSteps = 20;         // upper bound for beams that cover a lot of the screen
     float marchPixelsPerStep = 6.0f;// one step per this many half-res pixels of on-screen beam length
-    float hazePhaseG = 0.45f;       // Henyey-Greenstein anisotropy: 0 = isotropic, ->1 = strong forward scatter
+    float hazePhaseG = 0.7f;        // forward lobe of the haze phase function (Henyey-Greenstein g, 0..0.95);
+                                    // 30 % of the scattering is isotropic on top of it
 
     // --- beam extent (applies to surface lighting and haze) -----------------------
     float maxBeamLength = 60.0f;    // m, hard cap on the length of a beam volume

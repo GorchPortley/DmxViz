@@ -4,9 +4,11 @@
 // Post Processing in Call of Duty: Advanced Warfare" (SIGGRAPH 2014): five
 // overlapping 2x2 boxes, which avoids the blocky look of a plain 2x2 average.
 //
-// The first step (full-res HDR -> level 0) uses a "Karis average": each box is
-// weighted by 1 / (1 + luminance), so a single extremely bright pixel (a lens
-// core) cannot dominate and flicker as the camera moves.
+// The first step (full-res HDR -> level 0) also tames extreme values: every
+// tap is clamped to kMaxInput and the boxes are combined with a "Karis
+// average" (weighted by 1 / (1 + luminance)). Lens cores are thousands of
+// times brighter than anything else; unclamped, their energy would spread a
+// coloured veil over the whole image and flicker as they move by a pixel.
 // ============================================================================
 
 #ifdef VERTEX_SHADER
@@ -22,8 +24,19 @@ uniform vec4 u_params;  // xy = source texel size, z = 1 for the first (Karis) s
 
 out vec4 o_color;
 
+const float kMaxInput = 40.0;  // HDR units
+
 float karisWeight(vec3 c) {
     return 1.0 / (1.0 + dot(c, vec3(0.2126, 0.7152, 0.0722)));
+}
+
+vec3 fetch(vec2 uv, bool clampInput) {
+    vec3 c = texture(u_source, uv).rgb;
+    if (clampInput) {
+        float peak = max(c.r, max(c.g, c.b));
+        if (peak > kMaxInput) c *= kMaxInput / peak;
+    }
+    return c;
 }
 
 void main() {
@@ -31,20 +44,21 @@ void main() {
     // The target is half the source size, so target pixel centre (j + 0.5)
     // lands on source texel coordinate 2j + 1, i.e. between four source texels.
     vec2 uv = gl_FragCoord.xy * 2.0 * texel;
+    bool first = u_params.z > 0.5;
 
-    vec3 a = texture(u_source, uv + texel * vec2(-2.0, -2.0)).rgb;
-    vec3 b = texture(u_source, uv + texel * vec2(0.0, -2.0)).rgb;
-    vec3 c = texture(u_source, uv + texel * vec2(2.0, -2.0)).rgb;
-    vec3 d = texture(u_source, uv + texel * vec2(-1.0, -1.0)).rgb;
-    vec3 e = texture(u_source, uv + texel * vec2(1.0, -1.0)).rgb;
-    vec3 f = texture(u_source, uv + texel * vec2(-2.0, 0.0)).rgb;
-    vec3 g = texture(u_source, uv).rgb;
-    vec3 h = texture(u_source, uv + texel * vec2(2.0, 0.0)).rgb;
-    vec3 i = texture(u_source, uv + texel * vec2(-1.0, 1.0)).rgb;
-    vec3 j = texture(u_source, uv + texel * vec2(1.0, 1.0)).rgb;
-    vec3 k = texture(u_source, uv + texel * vec2(-2.0, 2.0)).rgb;
-    vec3 l = texture(u_source, uv + texel * vec2(0.0, 2.0)).rgb;
-    vec3 m = texture(u_source, uv + texel * vec2(2.0, 2.0)).rgb;
+    vec3 a = fetch(uv + texel * vec2(-2.0, -2.0), first);
+    vec3 b = fetch(uv + texel * vec2(0.0, -2.0), first);
+    vec3 c = fetch(uv + texel * vec2(2.0, -2.0), first);
+    vec3 d = fetch(uv + texel * vec2(-1.0, -1.0), first);
+    vec3 e = fetch(uv + texel * vec2(1.0, -1.0), first);
+    vec3 f = fetch(uv + texel * vec2(-2.0, 0.0), first);
+    vec3 g = fetch(uv, first);
+    vec3 h = fetch(uv + texel * vec2(2.0, 0.0), first);
+    vec3 i = fetch(uv + texel * vec2(-1.0, 1.0), first);
+    vec3 j = fetch(uv + texel * vec2(1.0, 1.0), first);
+    vec3 k = fetch(uv + texel * vec2(-2.0, 2.0), first);
+    vec3 l = fetch(uv + texel * vec2(0.0, 2.0), first);
+    vec3 m = fetch(uv + texel * vec2(2.0, 2.0), first);
 
     // Five boxes: the centre one (d e i j) weighs 0.5, the four corner ones 0.125 each.
     vec3 box0 = (d + e + i + j) * 0.25;
@@ -54,7 +68,7 @@ void main() {
     vec3 box4 = (g + h + l + m) * 0.25;
 
     vec3 result;
-    if (u_params.z > 0.5) {
+    if (first) {
         float w0 = karisWeight(box0) * 0.5;
         float w1 = karisWeight(box1) * 0.125;
         float w2 = karisWeight(box2) * 0.125;

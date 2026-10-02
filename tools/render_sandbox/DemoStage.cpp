@@ -4,6 +4,7 @@
 #include "assets/AssetLibrary.h"
 #include "assets/Primitives.h"
 
+#include <algorithm>
 #include <cmath>
 #include <string>
 
@@ -84,7 +85,7 @@ assets::MeshData makeBoxTruss(float length) {
 
 }  // namespace
 
-void DemoStage::build(assets::AssetLibrary& assets, int stressBeams) {
+void DemoStage::build(assets::AssetLibrary& assets, Rig rig, int stressBeams) {
     cube_ = assets.builtin(assets::BuiltinMesh::Cube);
     cylinder_ = assets.builtin(assets::BuiltinMesh::Cylinder);
     disc_ = assets.builtin(assets::BuiltinMesh::Disc);
@@ -110,8 +111,11 @@ void DemoStage::build(assets::AssetLibrary& assets, int stressBeams) {
             instance(cube_, boxAt({side * 8.8f, 1.3f, -1.5f}, {1.2f, 2.6f, 1.0f}), material(glm::vec3(0.03f), 0.5f)));
     }
 
-    if (stressBeams > 0) {
-        buildStressRig(gobos, stressBeams);
+    if (rig == Rig::Stress) {
+        buildStressRig(gobos, std::max(stressBeams, 1));
+    } else if (rig == Rig::Single) {
+        addTruss(assets, {0, 6.0f, -2.0f}, 6.0f, false);
+        buildSingleRig(gobos);
     } else {
         addTruss(assets, {0, 8.0f, -7.5f}, 18.0f, false);
         addTruss(assets, {0, 8.5f, -3.5f}, 18.0f, false);
@@ -129,32 +133,50 @@ void DemoStage::addTruss(assets::AssetLibrary& assets, const glm::vec3& centre, 
     staticMeshes_.push_back(instance(mesh, m, material(glm::vec3(0.62f), 0.35f, 1.0f)));
 }
 
+void DemoStage::aim(Fixture& f, const glm::vec3& target) {
+    const glm::vec3 head = f.mount + glm::vec3(0.0f, f.hanging ? -0.45f : 0.45f, 0.0f);
+    const glm::vec3 d = glm::normalize(target - head);
+    f.tilt = std::acos(std::clamp(f.hanging ? -d.y : d.y, -1.0f, 1.0f));
+    f.pan = std::atan2(d.x, d.z);
+}
+
 void DemoStage::buildShowRig(const std::vector<ImageId>& gobos) {
     fixtures_.clear();
-    // Upstage truss: profile spots with gobos fanning towards the audience.
+    const ImageId dots = gobos[0], breakup = gobos[1], star = gobos[2], lines = gobos[3], ring = gobos[4],
+                  glass = gobos[5];
+
+    // Upstage truss: gobo spots. The outer pairs reach over the audience, the
+    // inner four throw gobos onto the stage floor, two of them through a prism.
     const glm::vec3 spotColors[8] = {kBlue, kMagenta, kCyan, kAmber, kAmber, kCyan, kMagenta, kBlue};
+    const ImageId spotGobos[8] = {breakup, dots, star, dots, breakup, star, dots, breakup};
     for (int i = 0; i < 8; ++i) {
         Fixture f;
         f.kind = Kind::Spot;
         const float x = -7.0f + 2.0f * i;
         f.mount = {x, 8.0f - 0.18f, -7.5f};
         f.color = spotColors[i];
-        f.pan = -0.06f * x;
-        f.tilt = 0.62f + 0.05f * static_cast<float>(i % 3);
-        f.panSwing = 0.08f;
+        f.gobo = spotGobos[i];
+        f.goboSpin = (i % 2 == 0) ? 0.5f : -0.35f;
+        f.panSwing = 0.03f;
         f.speed = 0.4f;
         f.phase = 0.7f * i;
-        f.gobo = gobos[static_cast<std::size_t>(i % 4)];
-        f.goboSpin = (i % 2 == 0) ? 0.6f : -0.4f;
-        if (i == 2 || i == 5) {
-            f.prismFacets = 3;
-            f.prismSpread = degToRad(4.0f);
-            f.prismSpin = 0.3f;
+        const float side = x < 0.0f ? -1.0f : 1.0f;
+        if (i == 0 || i == 7) {
+            aim(f, {side * 9.0f, 2.5f, 18.0f});
+        } else if (i == 1 || i == 6) {
+            aim(f, {side * 6.0f, 4.0f, 20.0f});
+        } else {
+            aim(f, {x * 0.9f, 0.0f, 2.5f + 0.8f * static_cast<float>(i % 2)});
+            if (i == 2 || i == 5) {
+                f.prismFacets = 3;
+                f.prismSpread = degToRad(5.0f);
+                f.prismSpin = 0.3f;
+            }
         }
-        if (i == 3) f.gobo2 = gobos[5];  // colour glass on top of the line gobo
+        if (i == 3) f.gobo2 = glass;  // colour glass on top of the dots
         fixtures_.push_back(f);
     }
-    // Midstage truss: narrow beam fixtures doing slow pan sweeps.
+    // Midstage truss: narrow beam fixtures sweeping a fan over the audience.
     const glm::vec3 beamColors[8] = {kWhite, kRed, kCyan, kGreen, kGreen, kCyan, kRed, kWhite};
     for (int i = 0; i < 8; ++i) {
         Fixture f;
@@ -162,10 +184,9 @@ void DemoStage::buildShowRig(const std::vector<ImageId>& gobos) {
         const float x = -7.0f + 2.0f * i;
         f.mount = {x, 8.5f - 0.18f, -3.5f};
         f.color = beamColors[i];
-        f.pan = (x < 0 ? -1.0f : 1.0f) * 0.35f;
-        f.tilt = 0.75f;
-        f.panSwing = 0.45f;
-        f.tiltSwing = 0.15f;
+        aim(f, {x * 2.4f, 0.5f, 13.0f});
+        f.panSwing = 0.25f;
+        f.tiltSwing = 0.12f;
         f.speed = 0.55f;
         f.phase = (x < 0 ? 0.0f : kPi) + 0.25f * i;
         if (i == 3) {
@@ -175,20 +196,28 @@ void DemoStage::buildShowRig(const std::vector<ImageId>& gobos) {
         }
         fixtures_.push_back(f);
     }
-    // Front truss: washes lighting the stage.
-    const glm::vec3 washColors[6] = {kWarm, kViolet, kWarm, kWarm, kViolet, kWarm};
+    // Front truss: two spots projecting gobos on the cyc, four washes on the stage.
     for (int i = 0; i < 6; ++i) {
         Fixture f;
-        f.kind = Kind::Wash;
         const float x = -6.25f + 2.5f * i;
         f.mount = {x, 8.0f - 0.18f, 1.5f};
-        f.color = washColors[i];
-        f.intensity = 0.55f;
-        f.pan = kPi + 0.05f * x;  // facing upstage
-        f.tilt = 0.55f;
+        if (i == 1 || i == 4) {
+            f.kind = Kind::Spot;
+            f.color = i == 1 ? kBlue : kViolet;
+            f.gobo = i == 1 ? breakup : ring;
+            f.goboSpin = i == 1 ? 0.15f : -0.2f;
+            f.zoom = 1.6f;
+            aim(f, {x * 0.8f, 5.0f, -9.5f});
+        } else {
+            f.kind = Kind::Wash;
+            f.color = kWarm;
+            f.intensity = 0.5f;
+            aim(f, {x * 0.7f, 0.0f, -3.5f});
+        }
         fixtures_.push_back(f);
     }
-    // Floor uplights in front of the cyc.
+    (void)lines;
+    // Floor uplights in front of the cyc: a fan of beams into the roof.
     for (int i = 0; i < 6; ++i) {
         Fixture f;
         f.kind = Kind::Beam;
@@ -196,9 +225,8 @@ void DemoStage::buildShowRig(const std::vector<ImageId>& gobos) {
         const float x = -6.0f + 2.4f * i;
         f.mount = {x, 0.0f, -8.4f};
         f.color = (i % 2 == 0) ? kMagenta : kBlue;
-        f.pan = -0.12f * x;
-        f.tilt = 0.32f;
-        f.tiltSwing = 0.12f;
+        aim(f, {x * 2.2f, 25.0f, -1.0f});
+        f.tiltSwing = 0.1f;
         f.speed = 0.35f;
         f.phase = 0.9f * i;
         f.zoom = 1.6f;
@@ -232,6 +260,22 @@ void DemoStage::buildShowRig(const std::vector<ImageId>& gobos) {
             f.tilt = 1.45f;
             fixtures_.push_back(f);
         }
+    }
+}
+
+void DemoStage::buildSingleRig(const std::vector<ImageId>& gobos) {
+    fixtures_.clear();
+    const ImageId patterns[2] = {gobos[1], gobos[0]};  // breakup, dots
+    const glm::vec3 colors[2] = {kCyan, kAmber};
+    for (int i = 0; i < 2; ++i) {
+        Fixture f;
+        f.kind = Kind::Spot;
+        f.mount = {-1.5f + 3.0f * i, 6.0f - 0.18f, -2.0f};
+        f.color = colors[i];
+        f.pan = 0.0f;
+        f.tilt = 0.45f;
+        f.gobo = patterns[i];
+        fixtures_.push_back(f);
     }
 }
 

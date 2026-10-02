@@ -17,8 +17,13 @@ namespace dmxviz::sandbox {
 
 class DemoStage {
 public:
-    // stressBeams > 0 replaces the show rig by that many moving heads in a grid.
-    void build(assets::AssetLibrary& assets, int stressBeams);
+    enum class Rig {
+        Show,    // the concert stage (default)
+        Single,  // two gobo spots, for close-up inspection of one beam
+        Stress,  // `stressBeams` moving heads in a grid (performance test)
+    };
+
+    void build(assets::AssetLibrary& assets, Rig rig, int stressBeams);
 
     // Appends this moment's meshes and beams (pan sweeps, gobo spin) to the scene.
     void update(double timeSeconds, render::RenderScene& scene) const;
@@ -48,9 +53,11 @@ private:
         bool blades = false;
     };
 
+    static void aim(Fixture& f, const glm::vec3& target);  // sets pan/tilt so the beam hits target
     void addTruss(assets::AssetLibrary& assets, const glm::vec3& centre, float length, bool vertical);
     void buildShowRig(const std::vector<ImageId>& gobos);
     void buildStressRig(const std::vector<ImageId>& gobos, int beams);
+    void buildSingleRig(const std::vector<ImageId>& gobos);
     void emitFixture(const Fixture& f, double time, render::RenderScene& scene) const;
 
     std::vector<MeshInstance> staticMeshes_;

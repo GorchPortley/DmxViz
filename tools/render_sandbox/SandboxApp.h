@@ -4,7 +4,8 @@
 // a headless screenshot mode for CI.
 //
 //   render_sandbox [--screenshot out.png] [--frames N] [--beams N] [--haze x]
-//                  [--camera front|side|top|audience] [--time seconds] [--no-ui]
+//                  [--camera front|side|top|audience|close] [--rig show|single|stress]
+//                  [--time seconds] [--no-ui]
 
 #include "DemoStage.h"
 #include "assets/AssetLibrary.h"
@@ -22,7 +23,8 @@ namespace dmxviz::sandbox {
 struct SandboxOptions {
     std::optional<std::string> screenshotPath;
     int frames = 0;           // exit after this many frames (0 = run until closed)
-    int stressBeams = 0;      // > 0: stress rig with this many beams
+    std::string rig = "show"; // show | single | stress (--beams N implies stress)
+    int stressBeams = 0;      // beams in the stress rig
     float haze = 0.3f;
     std::string camera = "front";
     double startTime = 2.0;   // animation time of the first frame (s)

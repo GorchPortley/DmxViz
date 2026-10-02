@@ -95,15 +95,15 @@ void BeamPacker::pack(std::span<const BeamState> beams, const Frustum& frustum, 
         }
 
         // Lens glow: one sprite per lens, using the unsplit beam. Skip lenses
-        // that face away from the camera or are off screen.
+        // that face away from the camera (lens_glow.glsl shows a little stray
+        // light over the whole front hemisphere) or are off screen.
         if (settings.lensGlow) {
             const glm::vec3 toCamera = cameraPos - b.position;
             const float dist = glm::length(toCamera);
             if (dist > 1e-3f) {
                 const float cosAngle = glm::dot(f.dir, toCamera / dist);
-                const float t = cosAngle > 1e-3f ? std::sqrt(std::max(0.0f, 1.0f - cosAngle * cosAngle)) / cosAngle : 1e6f;
                 const float radius = rect ? 0.5f * glm::length(b.emitterSize) : std::max(b.lensRadius, kMinLensRadius);
-                if (t < profile.tanCutoff && !sphereOutsideFrustum(frustum, b.position, radius + 0.5f)) {
+                if (cosAngle > 0.0f && !sphereOutsideFrustum(frustum, b.position, radius + 0.5f)) {
                     GlowGpu g;
                     g.posRadius = {b.position, radius};
                     g.dirTanBeam = {f.dir, profile.tanBeam};

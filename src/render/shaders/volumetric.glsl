@@ -109,6 +109,15 @@ float henyeyGreenstein(float cosTheta, float g) {
     return (1.0 - g * g) / (4.0 * PI * denom * sqrt(denom));
 }
 
+// Stage haze droplets scatter strongly forward (a tight glow around a beam that
+// points at you) but beams must still read from the side. A strongly forward
+// HG lobe (frame.haze.w) plus an isotropic share gives both.
+const float kIsotropicShare = 0.3;
+
+float hazePhase(float cosTheta) {
+    return mix(henyeyGreenstein(cosTheta, frame.haze.w), 1.0 / (4.0 * PI), kIsotropicShare);
+}
+
 // Haze density multiplier around 1. The noise drifts slowly so the haze looks
 // alive; hazeVariation (frame.haze.y) controls how patchy it is.
 float hazeDensity(vec3 p) {
@@ -163,7 +172,6 @@ void main() {
     int steps = int(clamp(screenLength / frame.params2.z, frame.params.z, frame.params.w));
 
     float jitter = interleavedGradientNoise(gl_FragCoord.xy);
-    float g = frame.haze.w;
     vec3 sum = vec3(0.0);
     for (int i = 0; i < steps; ++i) {
         float theta = mix(thetaA, thetaB, (float(i) + jitter) / float(steps));
@@ -178,7 +186,7 @@ void main() {
         vec3 pattern = beamPattern(b, bp.t, lensBlur);
 
         vec3 lightDir = (p - apex) * inversesqrt(bp.dist2);
-        float phase = henyeyGreenstein(dot(lightDir, -rd), g);
+        float phase = hazePhase(dot(lightDir, -rd));
         sum += pattern * (f * phase * hazeDensity(p));
     }
 
