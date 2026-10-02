@@ -61,7 +61,6 @@ void App::init() {
     renderer_.init();
     viewport_ = std::make_unique<render::ViewportTarget>();
 
-    camera_.position = {0.0f, 4.0f, 12.0f};
     scene_.environment.background = {0.01f, 0.01f, 0.015f};
     log::info("app", "DmxViz started ({}x{})", sapp_width(), sapp_height());
 }
@@ -128,10 +127,9 @@ void App::drawViewport() {
         viewport_->resize(w, h);
 
         const float aspect = static_cast<float>(w) / static_cast<float>(h);
-        camera_.view = glm::lookAt(camera_.position, glm::vec3(0.0f, 1.5f, 0.0f), glm::vec3(0, 1, 0));
-        camera_.projection = glm::perspective(camera_.fovY, aspect, camera_.nearPlane, camera_.farPlane);
-        renderer_.render(*viewport_, camera_, scene_, assets_);
+        renderer_.render(*viewport_, camera_.camera(aspect), scene_, assets_);
         ImGui::Image(ImTextureRef(viewport_->imguiTexture()), avail);
+        ui::handleViewportCameraInput(camera_, ImGui::IsItemHovered(), avail.y, ImGui::GetIO().DeltaTime);
     }
     ImGui::End();
     ImGui::PopStyleVar();

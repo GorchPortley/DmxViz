@@ -9,6 +9,7 @@
 
 #include "assets/AssetLibrary.h"
 #include "render/Renderer.h"
+#include "ui/ViewportCamera.h"
 
 #include <filesystem>
 #include <memory>
@@ -52,7 +53,7 @@ private:
     render::Renderer renderer_;
     std::unique_ptr<render::ViewportTarget> viewport_;
     render::RenderScene scene_;
-    render::Camera camera_;
+    ui::ViewportCamera camera_;
     std::uint64_t frameIndex_ = 0;
     bool showImGuiDemo_ = false;
 };
