@@ -40,7 +40,15 @@ jobs:
         run: cmake -S . -B build -DDMXVIZ_WARNINGS_AS_ERRORS=ON
 
       - name: Build
-        run: cmake --build build --config RelWithDebInfo --parallel
+        shell: bash
+        run: cmake --build build --config RelWithDebInfo --parallel 2>&1 | tee build.log; exit ${PIPESTATUS[0]}
+
+      - name: Error summary
+        if: failure()
+        shell: bash
+        run: |
+          echo "==== unique compiler errors/warnings (first 60) ===="
+          grep -E "(error|warning) C[0-9]+:|error:|warning:" build.log | sed -E 's/ \[[^]]*\]$//' | sort -u | head -60 || true
 
       - name: Unit tests
         run: ctest --test-dir build -C RelWithDebInfo --output-on-failure
