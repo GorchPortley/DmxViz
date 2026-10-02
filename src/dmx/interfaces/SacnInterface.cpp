@@ -15,11 +15,13 @@ namespace {
 
 using namespace std::chrono_literals;
 
-constexpr auto kReceiveTimeout = 50ms;     // how often the IO thread checks its stop flag
+constexpr auto kReceiveTimeout = 50ms;      // how often the IO thread checks its stop flag
 constexpr auto kForgetSequenceAfter = 10s;  // drop sequence state of senders gone this long
 constexpr std::size_t kUniverseTableSize = sacn::kMaxUniverse + 1u;
 
-bool validUniverse(int universe) { return universe >= sacn::kMinUniverse && universe <= sacn::kMaxUniverse; }
+bool validUniverse(int universe) {
+    return universe >= sacn::kMinUniverse && universe <= sacn::kMaxUniverse;
+}
 
 }  // namespace
 
@@ -30,7 +32,9 @@ SacnInterface::SacnInterface()
     config_.cid = sacn::generateCid();
 }
 
-SacnInterface::~SacnInterface() { stop(); }
+SacnInterface::~SacnInterface() {
+    stop();
+}
 
 void SacnInterface::setConfig(SacnConfig newConfig) {
     // A config built from scratch has no CID; the sender identity must survive edits.
@@ -133,8 +137,10 @@ void SacnInterface::handlePacket(std::span<const std::uint8_t> bytes, const Endp
     const auto packet = sacn::decodeData(bytes);
     if (!packet) {
         // Sync and discovery packets are valid E1.31 we do not need.
-        if (sacn::isExtendedPacket(bytes)) countIn();
-        else countInvalid();
+        if (sacn::isExtendedPacket(bytes))
+            countIn();
+        else
+            countInvalid();
         return;
     }
     if (packet->cid == active_.cid) return;  // our own multicast, looped back by the OS
@@ -167,8 +173,7 @@ void SacnInterface::handlePacket(std::span<const std::uint8_t> bytes, const Endp
     submitInput(static_cast<UniverseId>(universe), source, packet->slots);
 }
 
-bool SacnInterface::acceptSequence(const sacn::Cid& cid, std::uint16_t universe, std::uint8_t sequence,
-                                   TimePoint now) {
+bool SacnInterface::acceptSequence(const sacn::Cid& cid, std::uint16_t universe, std::uint8_t sequence, TimePoint now) {
     for (SequenceState& entry : sequences_) {
         if (entry.universe != universe || entry.cid != cid) continue;
         // After a data-loss timeout the sender may have restarted with any number.
@@ -264,8 +269,8 @@ bool SacnInterface::loadConfig(const nlohmann::json& settings, std::string& erro
         c.acceptAllUniverses = settings.value("acceptAllUniverses", c.acceptAllUniverses);
         c.acceptPreview = settings.value("acceptPreview", c.acceptPreview);
         c.sourceName = settings.value("sourceName", c.sourceName);
-        c.priority = static_cast<std::uint8_t>(std::clamp(settings.value("priority", int{c.priority}), 0,
-                                                          int{sacn::kMaxPriority}));
+        c.priority = static_cast<std::uint8_t>(
+            std::clamp(settings.value("priority", int{c.priority}), 0, int{sacn::kMaxPriority}));
         const std::string output = settings.value("output", std::string("multicast"));
         if (output != "multicast" && output != "unicast") {
             error = std::format("unknown sACN output mode '{}'", output);

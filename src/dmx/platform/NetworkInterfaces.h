@@ -15,11 +15,11 @@ namespace dmxviz::dmx {
 
 // One IPv4 address of one network adapter (an adapter with two addresses appears twice).
 struct NetworkInterfaceInfo {
-    std::string name;                    // "eth0", "Ethernet 2", ...
+    std::string name;  // "eth0", "Ethernet 2", ...
     Ipv4Address address;
     Ipv4Address netmask;
-    Ipv4Address broadcast;               // directed broadcast, e.g. 192.168.1.255
-    std::array<std::uint8_t, 6> mac{};   // all zero if unknown
+    Ipv4Address broadcast;              // directed broadcast, e.g. 192.168.1.255
+    std::array<std::uint8_t, 6> mac{};  // all zero if unknown
     bool loopback = false;
     bool up = false;
 

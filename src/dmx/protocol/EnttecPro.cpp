@@ -43,7 +43,8 @@ std::size_t encodeReceiveDmxOnChange(bool onlyChanges, std::span<std::uint8_t> o
 
 std::optional<ReceivedDmx> decodeReceivedDmx(const WidgetMessage& message) {
     // Status byte + start code at least; up to 512 channels.
-    if (message.label != label::kReceivedDmx || message.payload.size() < 2 || message.payload.size() > 2 + kUniverseSize)
+    if (message.label != label::kReceivedDmx || message.payload.size() < 2 ||
+        message.payload.size() > 2 + kUniverseSize)
         return std::nullopt;
     ReceivedDmx result;
     result.status = message.payload[0];

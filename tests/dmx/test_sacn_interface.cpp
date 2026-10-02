@@ -144,7 +144,7 @@ TEST_CASE("sacn interface: start codes, preview and termination") {
     SacnReceiver rx(c);
     RawSender raw;
 
-    raw.send(rx.endpoint(), 1, 1, 200, 0xDD);                // per-address priority: not levels
+    raw.send(rx.endpoint(), 1, 1, 200, 0xDD);                 // per-address priority: not levels
     raw.send(rx.endpoint(), 1, 2, 150, 0, /*preview*/ true);  // preview not wanted here
     REQUIRE(dmxtest::waitFor([&] { return rx.iface.status().packetsIn >= 2; }));
     DmxSnapshot snap;

@@ -39,7 +39,9 @@ SourceDescriptor sacnSource(InterfaceId interfaceId, std::uint8_t cidByte, std::
     return d;
 }
 
-std::vector<std::uint8_t> frame(std::initializer_list<std::uint8_t> values) { return values; }
+std::vector<std::uint8_t> frame(std::initializer_list<std::uint8_t> values) {
+    return values;
+}
 
 }  // namespace
 
@@ -58,8 +60,8 @@ TEST_CASE("store: single source and snapshot accessors") {
     REQUIRE(snap.universe(3) != nullptr);
     CHECK(snap.channel(3, 1) == 10);
     CHECK(snap.channel(3, 3) == 30);
-    CHECK(snap.channel(3, 4) == 0);    // short frames are zero-filled
-    CHECK(snap.channel(3, 0) == 0);    // invalid addresses read 0
+    CHECK(snap.channel(3, 4) == 0);  // short frames are zero-filled
+    CHECK(snap.channel(3, 0) == 0);  // invalid addresses read 0
     CHECK(snap.channel(3, 513) == 0);
     CHECK(snap.channel(2, 1) == 0);
     CHECK(snap.time() == t0 + 10ms);
@@ -302,8 +304,8 @@ TEST_CASE("store: clearing the programmer releases its universes") {
 
 TEST_CASE("store: merge for output leaves out the receiving interface") {
     UniverseStore store;
-    store.submit(1, artnetSource(1, 1), frame({100, 0}), t0);   // received on interface 1
-    store.submit(1, artnetSource(2, 1), frame({0, 150}), t0);   // received on interface 2
+    store.submit(1, artnetSource(1, 1), frame({100, 0}), t0);  // received on interface 1
+    store.submit(1, artnetSource(2, 1), frame({0, 150}), t0);  // received on interface 2
     store.setProgrammerChannel(1, 3, 33);
 
     UniverseData out{};

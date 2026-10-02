@@ -24,9 +24,13 @@ namespace {
 // Defined here so we do not depend on <devguid.h>/<initguid.h> include-order tricks.
 const GUID kPortsClassGuid = {0x4d36e978, 0xe325, 0x11ce, {0xbf, 0xc1, 0x08, 0x00, 0x2b, 0xe1, 0x03, 0x18}};
 
-HANDLE toHandle(std::intptr_t handle) { return reinterpret_cast<HANDLE>(handle); }
+HANDLE toHandle(std::intptr_t handle) {
+    return reinterpret_cast<HANDLE>(handle);
+}
 
-std::string lastErrorText() { return std::system_category().message(static_cast<int>(GetLastError())); }
+std::string lastErrorText() {
+    return std::system_category().message(static_cast<int>(GetLastError()));
+}
 
 std::string toUtf8(const wchar_t* text) {
     if (!text || !*text) return {};
@@ -37,7 +41,9 @@ std::string toUtf8(const wchar_t* text) {
     return result;
 }
 
-int comNumber(const std::string& name) { return std::atoi(name.c_str() + 3); }  // "COM12" -> 12
+int comNumber(const std::string& name) {
+    return std::atoi(name.c_str() + 3);
+}  // "COM12" -> 12
 
 }  // namespace
 
@@ -76,7 +82,9 @@ std::vector<SerialPortInfo> listSerialPorts() {
     return ports;
 }
 
-SerialPort::~SerialPort() { close(); }
+SerialPort::~SerialPort() {
+    close();
+}
 
 bool SerialPort::fail(const std::string& what) {
     lastError_ = std::format("{}: {}", what, lastErrorText());
@@ -135,7 +143,9 @@ void SerialPort::close() {
     handle_ = -1;
 }
 
-bool SerialPort::isOpen() const { return handle_ != -1; }
+bool SerialPort::isOpen() const {
+    return handle_ != -1;
+}
 
 int SerialPort::read(std::span<std::uint8_t> buffer, std::chrono::milliseconds timeout) {
     if (!isOpen()) return -1;

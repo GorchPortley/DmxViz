@@ -53,7 +53,7 @@ struct WidgetMessage {
 
 // Label 5 payload: a status byte, then the received frame beginning with the start code.
 struct ReceivedDmx {
-    std::uint8_t status = 0;             // bit 0: receive queue overflow, bit 1: receive overrun
+    std::uint8_t status = 0;  // bit 0: receive queue overflow, bit 1: receive overrun
     std::uint8_t startCode = 0;
     std::span<const std::uint8_t> channels;
 
@@ -64,7 +64,7 @@ std::optional<ReceivedDmx> decodeReceivedDmx(const WidgetMessage& message);
 // Label 9 payload: which of 40 consecutive bytes of the frame changed, and their new values.
 // Byte index 0 of the frame is the start code, so index k is DMX channel k.
 struct ChangeOfState {
-    std::uint16_t firstByteIndex = 0;      // payload[0] * 8
+    std::uint16_t firstByteIndex = 0;  // payload[0] * 8
     std::array<std::uint8_t, 5> changedBits{};
     std::span<const std::uint8_t> changedValues;  // one value per set bit, in bit order
 };

@@ -113,8 +113,7 @@ std::optional<DataPacket> decodeData(std::span<const std::uint8_t> packet) {
 
     // Framing layer: must end exactly where the root PDU ends.
     const auto framingLength = pduLength(&packet[kFramingFlagsLength]);
-    if (!framingLength || kFramingFlagsLength + *framingLength != kRootFlagsLength + *rootLength)
-        return std::nullopt;
+    if (!framingLength || kFramingFlagsLength + *framingLength != kRootFlagsLength + *rootLength) return std::nullopt;
     if (bytes::readU32BE(&packet[kFramingVector]) != kVectorFramingData) return std::nullopt;
 
     // DMP layer: fixed addressing (first address 0, increment 1), 1..513 property values.

@@ -36,8 +36,8 @@ InterfaceRegistry InterfaceRegistry::withBuiltinTypes() {
 }
 
 void InterfaceRegistry::add(InterfaceTypeInfo type) {
-    const auto it = std::find_if(types_.begin(), types_.end(),
-                                 [&](const InterfaceTypeInfo& t) { return t.name == type.name; });
+    const auto it =
+        std::find_if(types_.begin(), types_.end(), [&](const InterfaceTypeInfo& t) { return t.name == type.name; });
     if (it != types_.end())
         *it = std::move(type);
     else

@@ -30,15 +30,15 @@ TEST_CASE("artnet: ArtDmx golden layout") {
     packet.data = data;
 
     const std::vector<std::uint8_t> expected = {
-        'A', 'r', 't', '-', 'N', 'e', 't', 0,  // ID
-        0x00, 0x50,                            // OpDmx, little endian
-        0x00, 0x0E,                            // protocol version 14
-        0x2A,                                  // sequence
-        0x01,                                  // physical
-        0x34,                                  // SubUni: Sub-Net 3, Universe 4
-        0x12,                                  // Net
-        0x00, 0x04,                            // length, big endian, padded to even
-        1, 2, 3, 0,                            // data + pad
+        'A',  'r',  't', '-', 'N', 'e', 't', 0,  // ID
+        0x00, 0x50,                              // OpDmx, little endian
+        0x00, 0x0E,                              // protocol version 14
+        0x2A,                                    // sequence
+        0x01,                                    // physical
+        0x34,                                    // SubUni: Sub-Net 3, Universe 4
+        0x12,                                    // Net
+        0x00, 0x04,                              // length, big endian, padded to even
+        1,    2,    3,   0,                      // data + pad
     };
     CHECK(encodeDmxPacket(packet) == expected);
 }
@@ -196,7 +196,7 @@ TEST_CASE("artnet: ArtPollReply golden layout") {
     CHECK(std::string(reinterpret_cast<const char*>(&b[44])) == "DmxViz visualiser");
     CHECK(std::string(reinterpret_cast<const char*>(&b[108])) == "#0001 [0007] OK");
     CHECK(b[172] == 0);
-    CHECK(b[173] == 4);     // NumPorts
+    CHECK(b[173] == 4);  // NumPorts
     for (int i = 0; i < 4; ++i) {
         CHECK(b[174 + i] == 0x80);  // PortTypes: output from Art-Net, DMX512
         CHECK(b[190 + i] == i);     // SwOut

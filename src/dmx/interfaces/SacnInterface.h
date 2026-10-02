@@ -27,19 +27,19 @@
 namespace dmxviz::dmx {
 
 struct SacnConfig {
-    Ipv4Address nic;                            // 0.0.0.0 = all interfaces
-    std::uint16_t port = sacn::kDefaultPort;    // listen port (0 = any free port) and output port
-    int universeOffset = 0;                     // logical universe = sACN universe + offset
-    std::vector<std::uint16_t> universes{1};    // sACN universes to receive
-    bool multicastInput = true;                 // join the multicast group of each universe
-    bool acceptAllUniverses = false;            // also accept universes not listed (e.g. via unicast)
+    Ipv4Address nic;                          // 0.0.0.0 = all interfaces
+    std::uint16_t port = sacn::kDefaultPort;  // listen port (0 = any free port) and output port
+    int universeOffset = 0;                   // logical universe = sACN universe + offset
+    std::vector<std::uint16_t> universes{1};  // sACN universes to receive
+    bool multicastInput = true;               // join the multicast group of each universe
+    bool acceptAllUniverses = false;          // also accept universes not listed (e.g. via unicast)
     bool acceptPreview = true;
 
     std::string sourceName = "DmxViz";
     std::uint8_t priority = sacn::kDefaultPriority;  // 0..200
-    bool multicastOutput = true;                // false: unicast to unicastTargets only
+    bool multicastOutput = true;                     // false: unicast to unicastTargets only
     std::vector<Endpoint> unicastTargets;
-    sacn::Cid cid{};                            // our identity as a sender; all zero = keep the current one
+    sacn::Cid cid{};  // our identity as a sender; all zero = keep the current one
 };
 
 class SacnInterface : public DmxInterface {

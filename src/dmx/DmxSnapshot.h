@@ -17,14 +17,14 @@ namespace dmxviz::dmx {
 
 // One sender contributing to a universe, for the DMX monitor.
 struct SourceInfo {
-    std::string name;                 // sACN source name, Art-Net/USB interface label, "Programmer"
-    Endpoint endpoint;                // remote sender (zero for USB and the programmer)
+    std::string name;   // sACN source name, Art-Net/USB interface label, "Programmer"
+    Endpoint endpoint;  // remote sender (zero for USB and the programmer)
     Protocol protocol = Protocol::ArtNet;
     std::uint8_t priority = kDefaultPriority;
-    InterfaceId interfaceId = 0;      // which configured interface received it
+    InterfaceId interfaceId = 0;  // which configured interface received it
     float packetsPerSecond = 0.0f;
-    bool preview = false;             // sACN preview data
-    bool held = false;                // timed out; only kept to hold the last look
+    bool preview = false;  // sACN preview data
+    bool held = false;     // timed out; only kept to hold the last look
     TimePoint lastSeen{};
 };
 

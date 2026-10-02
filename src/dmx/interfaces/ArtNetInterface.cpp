@@ -15,15 +15,17 @@ namespace {
 
 using namespace std::chrono_literals;
 
-constexpr auto kReceiveTimeout = 50ms;        // how often the IO thread checks its stop flag
-constexpr auto kEchoWindow = 3s;              // our own broadcasts may come back this long after sending
+constexpr auto kReceiveTimeout = 50ms;  // how often the IO thread checks its stop flag
+constexpr auto kEchoWindow = 3s;        // our own broadcasts may come back this long after sending
 constexpr std::string_view kSourceName = "Art-Net";
 
 }  // namespace
 
 ArtNetInterface::ArtNetInterface() : sequence_(artnet::kMaxPortAddress + 1u, 0) {}
 
-ArtNetInterface::~ArtNetInterface() { stop(); }
+ArtNetInterface::~ArtNetInterface() {
+    stop();
+}
 
 bool ArtNetInterface::start(std::string& error) {
     if (running()) return true;
@@ -102,14 +104,21 @@ void ArtNetInterface::handlePacket(std::span<const std::uint8_t> packet, const E
         return;
     }
     switch (static_cast<artnet::OpCode>(*op)) {
-        case artnet::OpCode::Dmx: handleDmx(packet, from); break;
-        case artnet::OpCode::Poll: handlePoll(packet, from); break;
+        case artnet::OpCode::Dmx:
+            handleDmx(packet, from);
+            break;
+        case artnet::OpCode::Poll:
+            handlePoll(packet, from);
+            break;
         case artnet::OpCode::Sync:
             // Tolerated: we show each ArtDmx frame as soon as it arrives.
-            if (artnet::isSync(packet)) countIn();
-            else countInvalid();
+            if (artnet::isSync(packet))
+                countIn();
+            else
+                countInvalid();
             break;
-        default: break;  // ArtPollReply from other nodes, RDM, ...: not our business
+        default:
+            break;  // ArtPollReply from other nodes, RDM, ...: not our business
     }
 }
 

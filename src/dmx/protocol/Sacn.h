@@ -40,12 +40,12 @@ using Cid = std::array<std::uint8_t, 16>;
 
 struct DataPacket {
     Cid cid{};
-    std::string_view sourceName;          // after decode: a view into the packet
+    std::string_view sourceName;  // after decode: a view into the packet
     std::uint8_t priority = kDefaultPriority;
-    std::uint16_t syncAddress = 0;        // 0 = not synchronised
+    std::uint16_t syncAddress = 0;  // 0 = not synchronised
     std::uint8_t sequence = 0;
-    bool preview = false;                 // data meant for visualisers (us!), not live output
-    bool streamTerminated = false;        // sender is going away: drop it now
+    bool preview = false;           // data meant for visualisers (us!), not live output
+    bool streamTerminated = false;  // sender is going away: drop it now
     bool forceSync = false;
     std::uint16_t universe = 1;           // 1..63999
     std::uint8_t startCode = 0;           // 0 = dimmer data; others (e.g. 0xDD) are not DMX levels

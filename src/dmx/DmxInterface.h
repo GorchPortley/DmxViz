@@ -36,9 +36,9 @@ enum class InterfaceState { Stopped, Running, Error };
 
 struct InterfaceStatus {
     InterfaceState state = InterfaceState::Stopped;
-    std::string message;             // e.g. "listening on 0.0.0.0:6454", or the last error
-    std::uint64_t packetsIn = 0;     // valid DMX/protocol packets received
-    std::uint64_t packetsOut = 0;    // packets sent
+    std::string message;               // e.g. "listening on 0.0.0.0:6454", or the last error
+    std::uint64_t packetsIn = 0;       // valid DMX/protocol packets received
+    std::uint64_t packetsOut = 0;      // packets sent
     std::uint64_t packetsInvalid = 0;  // malformed, rejected or out-of-sequence packets
     float packetsInPerSecond = 0.0f;
     float packetsOutPerSecond = 0.0f;

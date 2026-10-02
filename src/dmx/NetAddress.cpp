@@ -30,7 +30,9 @@ std::optional<Ipv4Address> Ipv4Address::parse(std::string_view text) {
     return Ipv4Address{result};
 }
 
-std::string Endpoint::toString() const { return std::format("{}:{}", address.toString(), port); }
+std::string Endpoint::toString() const {
+    return std::format("{}:{}", address.toString(), port);
+}
 
 std::optional<Endpoint> Endpoint::parse(std::string_view text, std::uint16_t defaultPort) {
     Endpoint result;

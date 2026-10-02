@@ -59,7 +59,9 @@ void writeHeader(std::span<std::uint8_t> out, OpCode op) {
     bytes::writeU16LE(&out[8], static_cast<std::uint16_t>(op));
 }
 
-void writeVersion(std::span<std::uint8_t> out) { bytes::writeU16BE(&out[10], kProtocolVersion); }
+void writeVersion(std::span<std::uint8_t> out) {
+    bytes::writeU16BE(&out[10], kProtocolVersion);
+}
 
 // Copies text into a fixed, NUL-terminated field (truncating so the NUL always fits).
 void writeText(std::uint8_t* field, std::size_t fieldSize, std::string_view text) {
@@ -94,7 +96,7 @@ std::size_t encodeDmx(const DmxPacket& packet, std::span<std::uint8_t> out) {
     out[12] = packet.sequence;
     out[13] = packet.physical;
     out[14] = static_cast<std::uint8_t>(packet.portAddress & 0xFF);  // SubUni
-    out[15] = netOf(packet.portAddress);                              // Net
+    out[15] = netOf(packet.portAddress);                             // Net
     bytes::writeU16BE(&out[16], static_cast<std::uint16_t>(length));
     std::copy(packet.data.begin(), packet.data.end(), out.begin() + kDmxHeaderSize);
     std::fill(out.begin() + static_cast<std::ptrdiff_t>(kDmxHeaderSize + packet.data.size()),
@@ -265,6 +267,8 @@ std::size_t encodeSync(std::span<std::uint8_t> out) {
     return kSyncSize;  // Aux1, Aux2 = 0
 }
 
-bool isSync(std::span<const std::uint8_t> packet) { return hasHeader(packet, OpCode::Sync, kSyncSize); }
+bool isSync(std::span<const std::uint8_t> packet) {
+    return hasHeader(packet, OpCode::Sync, kSyncSize);
+}
 
 }  // namespace dmxviz::dmx::artnet

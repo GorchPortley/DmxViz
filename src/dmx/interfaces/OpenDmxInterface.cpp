@@ -18,9 +18,13 @@ constexpr auto kMaxSleepStep = 20ms;    // keep stop() responsive at low refresh
 
 }  // namespace
 
-OpenDmxInterface::~OpenDmxInterface() { stop(); }
+OpenDmxInterface::~OpenDmxInterface() {
+    stop();
+}
 
-void OpenDmxInterface::setRefreshRate(int hz) { refreshRate_.store(std::clamp(hz, kMinRefreshRate, kMaxRefreshRate)); }
+void OpenDmxInterface::setRefreshRate(int hz) {
+    refreshRate_.store(std::clamp(hz, kMinRefreshRate, kMaxRefreshRate));
+}
 
 bool OpenDmxInterface::onPortOpened(SerialPort& /*port*/) {
     period_ = std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(1.0 / refreshRate_.load()));

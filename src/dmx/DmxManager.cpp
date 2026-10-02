@@ -18,7 +18,9 @@ using namespace std::chrono_literals;
 constexpr auto kKeepAlive = 1s;  // unchanged universes are still sent this often
 constexpr int kConfigVersion = 1;
 
-const char* programmerModeName(ProgrammerMode mode) { return mode == ProgrammerMode::Override ? "override" : "merge"; }
+const char* programmerModeName(ProgrammerMode mode) {
+    return mode == ProgrammerMode::Override ? "override" : "merge";
+}
 
 }  // namespace
 
@@ -140,8 +142,8 @@ void DmxManager::setRoutes(const std::vector<OutputRoute>& newRoutes) {
     std::lock_guard lock(mutex_);
     routes_.clear();
     for (const OutputRoute& route : newRoutes) {
-        const bool duplicate = std::any_of(routes_.begin(), routes_.end(),
-                                           [&](const RouteState& r) { return r.route == route; });
+        const bool duplicate =
+            std::any_of(routes_.begin(), routes_.end(), [&](const RouteState& r) { return r.route == route; });
         if (!duplicate && route.universe != kInvalidUniverse) routes_.push_back(RouteState{route});
     }
 }
@@ -158,7 +160,9 @@ void DmxManager::removeRoute(const OutputRoute& route) {
     std::erase_if(routes_, [&](const RouteState& r) { return r.route == route; });
 }
 
-void DmxManager::setOutputRate(double hz) { outputRate_.store(std::clamp(hz, kMinOutputRate, kMaxOutputRate)); }
+void DmxManager::setOutputRate(double hz) {
+    outputRate_.store(std::clamp(hz, kMinOutputRate, kMaxOutputRate));
+}
 
 void DmxManager::processOutput(TimePoint now) {
     if (!outputEnabled_.load()) return;
@@ -204,19 +208,29 @@ void DmxManager::setProgrammerUniverse(UniverseId universe, const UniverseData& 
     store_.setProgrammerUniverse(universe, values);
 }
 
-void DmxManager::clearProgrammerUniverse(UniverseId universe) { store_.clearProgrammerUniverse(universe); }
+void DmxManager::clearProgrammerUniverse(UniverseId universe) {
+    store_.clearProgrammerUniverse(universe);
+}
 
-void DmxManager::clearProgrammer() { store_.clearProgrammer(); }
+void DmxManager::clearProgrammer() {
+    store_.clearProgrammer();
+}
 
-void DmxManager::setProgrammerMode(ProgrammerMode mode) { store_.setProgrammerMode(mode); }
+void DmxManager::setProgrammerMode(ProgrammerMode mode) {
+    store_.setProgrammerMode(mode);
+}
 
-ProgrammerMode DmxManager::programmerMode() const { return store_.programmerMode(); }
+ProgrammerMode DmxManager::programmerMode() const {
+    return store_.programmerMode();
+}
 
 std::optional<UniverseData> DmxManager::programmerValues(UniverseId universe) const {
     return store_.programmerValues(universe);
 }
 
-void DmxManager::snapshot(DmxSnapshot& out, TimePoint now) { store_.snapshot(out, now); }
+void DmxManager::snapshot(DmxSnapshot& out, TimePoint now) {
+    store_.snapshot(out, now);
+}
 
 // ---- configuration ------------------------------------------------------------------------
 
@@ -303,8 +317,8 @@ bool DmxManager::loadConfig(const nlohmann::json& config, std::string& error) {
                 error = std::format("route with invalid universe {}", universe);
                 return false;
             }
-            const bool known = std::any_of(created.begin(), created.end(),
-                                           [&](const auto& iface) { return iface->id() == id; });
+            const bool known =
+                std::any_of(created.begin(), created.end(), [&](const auto& iface) { return iface->id() == id; });
             if (known) newRoutes.push_back({static_cast<UniverseId>(universe), static_cast<InterfaceId>(id)});
         }
 

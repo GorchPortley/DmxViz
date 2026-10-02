@@ -52,12 +52,18 @@ enum class Protocol : std::uint8_t { ArtNet, Sacn, EnttecPro, OpenDmx, Loopback,
 
 constexpr std::string_view protocolName(Protocol protocol) {
     switch (protocol) {
-        case Protocol::ArtNet: return "Art-Net";
-        case Protocol::Sacn: return "sACN";
-        case Protocol::EnttecPro: return "Enttec DMX USB Pro";
-        case Protocol::OpenDmx: return "Enttec Open DMX USB";
-        case Protocol::Loopback: return "Loopback";
-        case Protocol::Programmer: return "Programmer";
+        case Protocol::ArtNet:
+            return "Art-Net";
+        case Protocol::Sacn:
+            return "sACN";
+        case Protocol::EnttecPro:
+            return "Enttec DMX USB Pro";
+        case Protocol::OpenDmx:
+            return "Enttec Open DMX USB";
+        case Protocol::Loopback:
+            return "Loopback";
+        case Protocol::Programmer:
+            return "Programmer";
     }
     return "?";
 }

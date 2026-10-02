@@ -21,8 +21,8 @@ bool waitFor(Condition&& condition, std::chrono::milliseconds timeout = std::chr
 }
 
 // Waits until the store holds universe `universe` with `value` at `address`.
-inline bool waitForChannel(dmxviz::dmx::UniverseStore& store, dmxviz::dmx::UniverseId universe,
-                           std::uint16_t address, std::uint8_t value) {
+inline bool waitForChannel(dmxviz::dmx::UniverseStore& store, dmxviz::dmx::UniverseId universe, std::uint16_t address,
+                           std::uint8_t value) {
     dmxviz::dmx::DmxSnapshot snapshot;
     return waitFor([&] {
         store.snapshot(snapshot);

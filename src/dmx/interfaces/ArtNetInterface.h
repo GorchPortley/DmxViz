@@ -28,10 +28,10 @@
 namespace dmxviz::dmx {
 
 struct ArtNetConfig {
-    Ipv4Address nic;                             // 0.0.0.0 = all interfaces
-    std::uint16_t port = artnet::kDefaultPort;   // listen port (0 = any free port) and output port
-    int universeOffset = 0;                      // logical universe = port-address + 1 + offset
-    bool broadcastOutput = true;                 // false: send to unicastTargets only
+    Ipv4Address nic;                            // 0.0.0.0 = all interfaces
+    std::uint16_t port = artnet::kDefaultPort;  // listen port (0 = any free port) and output port
+    int universeOffset = 0;                     // logical universe = port-address + 1 + offset
+    bool broadcastOutput = true;                // false: send to unicastTargets only
     std::vector<Endpoint> unicastTargets;
     bool replyToPoll = true;
     std::vector<UniverseId> announcedUniverses{1, 2, 3, 4};  // logical universes listed in ArtPollReply

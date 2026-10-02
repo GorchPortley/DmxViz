@@ -141,16 +141,36 @@ TEST_CASE("sacn: malformed packets are rejected") {
         bad[offset] = value;
         CHECK_FALSE(sacn::decodeData(bad));
     };
-    SUBCASE("preamble") { expectReject(1, 0x11); }
-    SUBCASE("ACN identifier") { expectReject(4, 'X'); }
-    SUBCASE("root flags") { expectReject(16, 0x60); }
-    SUBCASE("root vector") { expectReject(21, 0x03); }
-    SUBCASE("framing length") { expectReject(39, 0x5B); }
-    SUBCASE("framing vector") { expectReject(43, 0x01); }
-    SUBCASE("DMP vector") { expectReject(117, 0x01); }
-    SUBCASE("DMP address type") { expectReject(118, 0xA2); }
-    SUBCASE("address increment") { expectReject(122, 0x02); }
-    SUBCASE("property count") { expectReject(124, 0x06); }
+    SUBCASE("preamble") {
+        expectReject(1, 0x11);
+    }
+    SUBCASE("ACN identifier") {
+        expectReject(4, 'X');
+    }
+    SUBCASE("root flags") {
+        expectReject(16, 0x60);
+    }
+    SUBCASE("root vector") {
+        expectReject(21, 0x03);
+    }
+    SUBCASE("framing length") {
+        expectReject(39, 0x5B);
+    }
+    SUBCASE("framing vector") {
+        expectReject(43, 0x01);
+    }
+    SUBCASE("DMP vector") {
+        expectReject(117, 0x01);
+    }
+    SUBCASE("DMP address type") {
+        expectReject(118, 0xA2);
+    }
+    SUBCASE("address increment") {
+        expectReject(122, 0x02);
+    }
+    SUBCASE("property count") {
+        expectReject(124, 0x06);
+    }
     SUBCASE("universe 0") {
         auto bad = good;
         bad[113] = 0;
@@ -186,13 +206,13 @@ TEST_CASE("sacn: priority above 200 is clamped, non-zero start code is reported"
 
 TEST_CASE("sacn: sequence numbers (E1.31 6.7.2)") {
     CHECK(sacn::isSequenceAcceptable(10, 11));
-    CHECK_FALSE(sacn::isSequenceAcceptable(10, 10));  // duplicate
-    CHECK_FALSE(sacn::isSequenceAcceptable(10, 9));   // late
+    CHECK_FALSE(sacn::isSequenceAcceptable(10, 10));   // duplicate
+    CHECK_FALSE(sacn::isSequenceAcceptable(10, 9));    // late
     CHECK_FALSE(sacn::isSequenceAcceptable(10, 247));  // -19 after wrap
     CHECK(sacn::isSequenceAcceptable(10, 246));        // -20: treated as a restart
     CHECK(sacn::isSequenceAcceptable(255, 0));         // wrap-around
     CHECK(sacn::isSequenceAcceptable(250, 3));
-    CHECK(sacn::isSequenceAcceptable(0, 128));         // large jumps forward are accepted
+    CHECK(sacn::isSequenceAcceptable(0, 128));  // large jumps forward are accepted
 }
 
 TEST_CASE("sacn: multicast address") {

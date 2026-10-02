@@ -29,7 +29,7 @@ constexpr std::uint16_t kMaxPortAddress = 0x7FFF;
 
 constexpr std::size_t kDmxHeaderSize = 18;
 constexpr std::size_t kMaxDmxPacketSize = kDmxHeaderSize + 512;
-constexpr std::size_t kPollSize = 22;  // Art-Net 4 ArtPoll incl. targeted-mode fields
+constexpr std::size_t kPollSize = 22;     // Art-Net 4 ArtPoll incl. targeted-mode fields
 constexpr std::size_t kMinPollSize = 12;  // very old controllers send only ID + OpCode + version
 constexpr std::size_t kPollReplySize = 239;
 constexpr std::size_t kSyncSize = 14;
@@ -60,7 +60,9 @@ constexpr std::uint8_t netOf(std::uint16_t portAddress) {
 constexpr std::uint8_t subNetOf(std::uint16_t portAddress) {
     return static_cast<std::uint8_t>((portAddress >> 4) & 0x0F);
 }
-constexpr std::uint8_t universeOf(std::uint16_t portAddress) { return static_cast<std::uint8_t>(portAddress & 0x0F); }
+constexpr std::uint8_t universeOf(std::uint16_t portAddress) {
+    return static_cast<std::uint8_t>(portAddress & 0x0F);
+}
 constexpr std::uint16_t makePortAddress(std::uint8_t net, std::uint8_t subNet, std::uint8_t universe) {
     return static_cast<std::uint16_t>(((net & 0x7F) << 8) | ((subNet & 0x0F) << 4) | (universe & 0x0F));
 }
@@ -71,9 +73,9 @@ std::optional<std::uint16_t> opCodeOf(std::span<const std::uint8_t> packet);
 // ---- ArtDmx ---------------------------------------------------------------------------
 
 struct DmxPacket {
-    std::uint8_t sequence = 0;            // 1..255 wrapping; 0 means "sequencing disabled"
-    std::uint8_t physical = 0;            // sender's physical input port (informational)
-    std::uint16_t portAddress = 0;        // 15-bit Net:SubNet:Universe
+    std::uint8_t sequence = 0;           // 1..255 wrapping; 0 means "sequencing disabled"
+    std::uint8_t physical = 0;           // sender's physical input port (informational)
+    std::uint16_t portAddress = 0;       // 15-bit Net:SubNet:Universe
     std::span<const std::uint8_t> data;  // 1..512 channel values; after decode a view into the packet
 };
 
@@ -108,25 +110,25 @@ struct PollReply {
     Ipv4Address ip;
     std::uint16_t udpPort = kDefaultPort;
     std::uint16_t firmwareVersion = 1;
-    std::uint8_t netSwitch = 0;     // port-address bits 14..8 shared by all ports in this reply
-    std::uint8_t subSwitch = 0;     // port-address bits 7..4
+    std::uint8_t netSwitch = 0;  // port-address bits 14..8 shared by all ports in this reply
+    std::uint8_t subSwitch = 0;  // port-address bits 7..4
     std::uint16_t oem = kOemUnknown;
-    std::uint8_t status1 = 0xD0;    // indicators normal, port-address set locally
+    std::uint8_t status1 = 0xD0;  // indicators normal, port-address set locally
     std::uint16_t estaManufacturer = 0;
-    std::string shortName;          // up to 17 characters
-    std::string longName;           // up to 63 characters
-    std::string nodeReport;         // up to 63 characters, "#xxxx [yyyy] text"
-    std::uint8_t numPorts = 0;      // 0..4
-    std::array<std::uint8_t, 4> portTypes{};    // bit 7: outputs DMX received from Art-Net
+    std::string shortName;                    // up to 17 characters
+    std::string longName;                     // up to 63 characters
+    std::string nodeReport;                   // up to 63 characters, "#xxxx [yyyy] text"
+    std::uint8_t numPorts = 0;                // 0..4
+    std::array<std::uint8_t, 4> portTypes{};  // bit 7: outputs DMX received from Art-Net
     std::array<std::uint8_t, 4> goodInput{};
     std::array<std::uint8_t, 4> goodOutputA{};
-    std::array<std::uint8_t, 4> swIn{};         // low nibble of each input port-address
-    std::array<std::uint8_t, 4> swOut{};        // low nibble of each output port-address
+    std::array<std::uint8_t, 4> swIn{};   // low nibble of each input port-address
+    std::array<std::uint8_t, 4> swOut{};  // low nibble of each output port-address
     std::uint8_t style = kStyleVisual;
     std::array<std::uint8_t, 6> mac{};
     Ipv4Address bindIp;
-    std::uint8_t bindIndex = 1;     // 1-based page number when a node needs several replies
-    std::uint8_t status2 = 0x08;    // bit 3: supports 15-bit port-addresses
+    std::uint8_t bindIndex = 1;   // 1-based page number when a node needs several replies
+    std::uint8_t status2 = 0x08;  // bit 3: supports 15-bit port-addresses
 
     // Full output port-address of port `i` (0..3).
     std::uint16_t outputPortAddress(int i) const;

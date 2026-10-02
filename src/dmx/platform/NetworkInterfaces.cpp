@@ -55,7 +55,9 @@ std::string toUtf8(const wchar_t* text) {
 
 }  // namespace
 
-std::string NetworkInterfaceInfo::label() const { return std::format("{} ({})", name, address.toString()); }
+std::string NetworkInterfaceInfo::label() const {
+    return std::format("{} ({})", name, address.toString());
+}
 
 #ifdef _WIN32
 
@@ -69,9 +71,9 @@ std::vector<NetworkInterfaceInfo> listNetworkInterfaces() {
     ULONG status = ERROR_BUFFER_OVERFLOW;
     for (int attempt = 0; attempt < 4 && status == ERROR_BUFFER_OVERFLOW; ++attempt) {
         buffer.resize(size);
-        status = GetAdaptersAddresses(AF_INET,
-                                      GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER,
-                                      nullptr, reinterpret_cast<IP_ADAPTER_ADDRESSES*>(buffer.data()), &size);
+        status =
+            GetAdaptersAddresses(AF_INET, GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER,
+                                 nullptr, reinterpret_cast<IP_ADAPTER_ADDRESSES*>(buffer.data()), &size);
     }
     if (status != NO_ERROR) return result;
 
@@ -85,8 +87,7 @@ std::vector<NetworkInterfaceInfo> listNetworkInterfaces() {
             info.netmask = maskFromPrefix(unicast->OnLinkPrefixLength);
             info.loopback = adapter->IfType == IF_TYPE_SOFTWARE_LOOPBACK;
             info.up = adapter->OperStatus == IfOperStatusUp;
-            if (adapter->PhysicalAddressLength == 6)
-                std::memcpy(info.mac.data(), adapter->PhysicalAddress, 6);
+            if (adapter->PhysicalAddressLength == 6) std::memcpy(info.mac.data(), adapter->PhysicalAddress, 6);
             finish(info);
             result.push_back(std::move(info));
         }
@@ -102,7 +103,7 @@ std::vector<NetworkInterfaceInfo> listNetworkInterfaces() {
     if (getifaddrs(&list) != 0) return result;
 
     // MAC addresses come as separate AF_PACKET entries with the same interface name.
-    std::map<std::string, std::array<std::uint8_t, 6>> macs;
+    std::map<std::string, std::array<std::uint8_t, 6> > macs;
     for (ifaddrs* it = list; it; it = it->ifa_next) {
         if (!it->ifa_addr || it->ifa_addr->sa_family != AF_PACKET) continue;
         const auto* ll = reinterpret_cast<const sockaddr_ll*>(it->ifa_addr);

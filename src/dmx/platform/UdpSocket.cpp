@@ -30,16 +30,24 @@ namespace {
 
 #ifdef _WIN32
 using NativeSocket = SOCKET;
-int lastSocketError() { return WSAGetLastError(); }
+int lastSocketError() {
+    return WSAGetLastError();
+}
 #else
 using NativeSocket = int;
-int lastSocketError() { return errno; }
+int lastSocketError() {
+    return errno;
+}
 #endif
 
-NativeSocket native(std::uintptr_t handle) { return static_cast<NativeSocket>(handle); }
+NativeSocket native(std::uintptr_t handle) {
+    return static_cast<NativeSocket>(handle);
+}
 
 // The OS message for a socket error code (Winsock codes are Win32 error codes too).
-std::string errorText(int code) { return std::system_category().message(code); }
+std::string errorText(int code) {
+    return std::system_category().message(code);
+}
 
 sockaddr_in toSockaddr(const Endpoint& endpoint) {
     sockaddr_in addr{};
@@ -69,7 +77,9 @@ bool initNetworking() {
 #endif
 }
 
-UdpSocket::~UdpSocket() { close(); }
+UdpSocket::~UdpSocket() {
+    close();
+}
 
 UdpSocket::UdpSocket(UdpSocket&& other) noexcept : handle_(std::exchange(other.handle_, kInvalid)) {}
 
@@ -141,7 +151,9 @@ void UdpSocket::close() {
     handle_ = kInvalid;
 }
 
-bool UdpSocket::isOpen() const { return handle_ != kInvalid; }
+bool UdpSocket::isOpen() const {
+    return handle_ != kInvalid;
+}
 
 Endpoint UdpSocket::localEndpoint() const {
     if (!isOpen()) return {};
@@ -224,9 +236,9 @@ bool UdpSocket::sendTo(std::span<const std::uint8_t> data, const Endpoint& desti
     }
     const sockaddr_in addr = toSockaddr(destination);
 #ifdef _WIN32
-    const int sent = ::sendto(native(handle_), reinterpret_cast<const char*>(data.data()),
-                              static_cast<int>(data.size()), 0, reinterpret_cast<const sockaddr*>(&addr),
-                              kSockaddrLength);
+    const int sent =
+        ::sendto(native(handle_), reinterpret_cast<const char*>(data.data()), static_cast<int>(data.size()), 0,
+                 reinterpret_cast<const sockaddr*>(&addr), kSockaddrLength);
 #else
     const ssize_t sent = ::sendto(native(handle_), data.data(), data.size(), 0,
                                   reinterpret_cast<const sockaddr*>(&addr), kSockaddrLength);
@@ -270,8 +282,8 @@ int UdpSocket::receive(std::span<std::uint8_t> buffer, Endpoint& from, std::chro
         return -1;
     }
 #else
-    const ssize_t n = ::recvfrom(native(handle_), buffer.data(), buffer.size(), 0, reinterpret_cast<sockaddr*>(&addr),
-                                 &length);
+    const ssize_t n =
+        ::recvfrom(native(handle_), buffer.data(), buffer.size(), 0, reinterpret_cast<sockaddr*>(&addr), &length);
     if (n < 0) {
         const int code = errno;
         if (code == EAGAIN || code == EWOULDBLOCK || code == EINTR || code == ECONNREFUSED) return 0;

@@ -25,7 +25,9 @@ namespace {
 
 namespace fs = std::filesystem;
 
-std::string errnoText(int code) { return std::system_category().message(code); }
+std::string errnoText(int code) {
+    return std::system_category().message(code);
+}
 
 std::string readFirstLine(const fs::path& path) {
     std::ifstream file(path);
@@ -94,7 +96,9 @@ std::vector<SerialPortInfo> listSerialPorts() {
     return ports;
 }
 
-SerialPort::~SerialPort() { close(); }
+SerialPort::~SerialPort() {
+    close();
+}
 
 bool SerialPort::fail(const std::string& what) {
     lastError_ = std::format("{}: {}", what, errnoText(errno));
@@ -147,7 +151,9 @@ void SerialPort::close() {
     handle_ = -1;
 }
 
-bool SerialPort::isOpen() const { return handle_ >= 0; }
+bool SerialPort::isOpen() const {
+    return handle_ >= 0;
+}
 
 int SerialPort::read(std::span<std::uint8_t> buffer, std::chrono::milliseconds timeout) {
     if (!isOpen()) return -1;

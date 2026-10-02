@@ -42,7 +42,9 @@ public:
     bool loadConfig(const nlohmann::json&, std::string&) override { return true; }
 };
 
-DmxManagerOptions noThread() { return DmxManagerOptions{false}; }
+DmxManagerOptions noThread() {
+    return DmxManagerOptions{false};
+}
 
 }  // namespace
 
@@ -50,8 +52,8 @@ TEST_CASE("manager: registry and interface lifecycle") {
     DmxManager manager(noThread());
     std::vector<std::string> names;
     for (const InterfaceTypeInfo& type : manager.registry().types()) names.push_back(type.name);
-    CHECK(names == std::vector<std::string>{"Art-Net", "sACN", "Enttec DMX USB Pro", "Enttec Open DMX USB",
-                                            "Loopback"});
+    CHECK(names ==
+          std::vector<std::string>{"Art-Net", "sACN", "Enttec DMX USB Pro", "Enttec Open DMX USB", "Loopback"});
     REQUIRE(manager.registry().find("Enttec Open DMX USB"));
     CHECK_FALSE(manager.registry().find("Enttec Open DMX USB")->caps.input);
 
@@ -175,7 +177,7 @@ TEST_CASE("manager: an interface never gets its own input echoed back") {
 }
 
 TEST_CASE("manager: output thread refreshes routes on its own") {
-    DmxManager manager;  // with the thread
+    DmxManager manager;           // with the thread
     manager.setOutputRate(1000);  // clamped to 44 Hz
     CHECK(manager.outputRate() == DmxManager::kMaxOutputRate);
     const InterfaceId loop = manager.addInterface("Loopback");

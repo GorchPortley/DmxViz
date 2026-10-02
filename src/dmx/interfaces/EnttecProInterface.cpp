@@ -16,7 +16,9 @@ constexpr auto kReadTimeout = 10ms;
 
 }  // namespace
 
-EnttecProInterface::~EnttecProInterface() { stop(); }
+EnttecProInterface::~EnttecProInterface() {
+    stop();
+}
 
 SerialSettings EnttecProInterface::serialSettings() const {
     // The widget talks USB; the baud rate of the virtual COM port is irrelevant.
