@@ -87,7 +87,8 @@ MeshData buildFlatFrame(float width, float height, float thickness) {
         geom::addBox(m, {0.0f, y, z}, {width - 2.0f * b, b, depth});
     // Stage brace from two thirds up the back down to the floor behind the flat.
     const glm::vec3 top{0.0f, height * 0.66f, z - depth * 0.5f};
-    const glm::vec3 foot{0.0f, 0.0f, z - depth * 0.5f - height * 0.4f};
+    // The foot is lifted by half the brace thickness so its tilted end stays above the floor.
+    const glm::vec3 foot{0.0f, b * 0.2f, z - depth * 0.5f - height * 0.4f};
     const glm::vec3 d = top - foot;
     const float len = glm::length(d);
     // Rx(a) maps +Y to (0, cos a, sin a); align the box's long Y axis with d.
