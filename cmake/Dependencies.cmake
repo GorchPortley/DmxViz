@@ -83,6 +83,15 @@ if(DMXVIZ_BUILD_TESTS)
 endif()
 
 # --- compiled -----------------------------------------------------------------
+# Implementations of stb / nanosvg / cgltf. Built without the project's strict
+# warning flags; first-party code only includes their headers.
+add_library(dep_impls STATIC "${_tp}/single_header_impls.c")
+target_link_libraries(dep_impls PUBLIC dep_stb dep_nanosvg dep_cgltf)
+if(MSVC)
+    target_compile_definitions(dep_impls PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+add_library(dep::impls ALIAS dep_impls)
+
 add_library(dep_pugixml STATIC "${pugixml_SOURCE_DIR}/src/pugixml.cpp")
 target_include_directories(dep_pugixml SYSTEM PUBLIC "${pugixml_SOURCE_DIR}/src")
 add_library(dep::pugixml ALIAS dep_pugixml)
