@@ -63,6 +63,18 @@ void ViewportCamera::frame(const Aabb& bounds) {
     distance_ = std::clamp(radius / std::sin(fovY_ * 0.5f) * 1.1f, kMinDistance, kMaxDistance);
 }
 
+void ViewportCamera::lookFromTo(const glm::vec3& eye, const glm::vec3& target) {
+    const glm::vec3 toTarget = target - eye;
+    const float length = glm::length(toTarget);
+    if (length < 1e-4f) return;
+    const glm::vec3 f = toTarget / length;
+    target_ = target;
+    distance_ = std::clamp(length, kMinDistance, kMaxDistance);
+    pitch_ = std::clamp(std::asin(std::clamp(f.y, -1.0f, 1.0f)), -kMaxPitch, kMaxPitch);
+    // Inverse of directionFromAngles(); keep the old heading when looking straight up or down.
+    if (std::abs(f.x) + std::abs(f.z) > 1e-5f) yaw_ = std::atan2(-f.x, -f.z);
+}
+
 void ViewportCamera::setPreset(Preset preset, const Aabb& stageBounds) {
     switch (preset) {
         case Preset::Front: yaw_ = 0.0f; pitch_ = 0.0f; break;

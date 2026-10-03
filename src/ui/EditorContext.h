@@ -25,6 +25,8 @@
 
 namespace dmxviz::ui {
 
+class ViewportCamera;
+
 struct EditorContext {
     stage::Scene& scene;
     stage::CommandStack& commands;
@@ -38,6 +40,10 @@ struct EditorContext {
     render::RenderScene& frame;        // what the simulation produced for this frame
 
     float dpiScale = 1.0f;  // framebuffer pixels per ImGui pixel (high-DPI screens)
+
+    // The 3D view's camera (owned by the viewport panel). Panels use it to place new nodes in front of
+    // the camera and to frame or apply camera presets. May be null (tests, headless tools).
+    ViewportCamera* viewportCamera = nullptr;
 
     std::filesystem::path projectPath;  // empty until the project was saved or opened
     bool settingsDirty = false;         // environment / DMX config changed since the last save

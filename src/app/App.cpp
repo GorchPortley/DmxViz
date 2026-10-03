@@ -19,9 +19,13 @@
 #include "dmx/interfaces/SacnInterface.h"
 #include "stage/ProjectFile.h"
 #include "ui/DockLayout.h"
+#include "ui/EnvironmentPanel.h"
+#include "ui/InspectorPanel.h"
 #include "ui/LogPanel.h"
+#include "ui/OutlinerPanel.h"
 #include "ui/PanelTitles.h"
 #include "ui/PlaceholderPanel.h"
+#include "ui/StageMenu.h"
 #include "ui/Theme.h"
 
 #include "sokol_app.h"
@@ -195,9 +199,12 @@ void App::createPanels() {
     viewport_ = viewport.get();
     panels_.push_back(std::move(viewport));
 
+    context_->viewportCamera = &viewport_->camera();
+
+    panels_.push_back(std::make_unique<ui::OutlinerPanel>());
+    panels_.push_back(std::make_unique<ui::InspectorPanel>());
+    panels_.push_back(std::make_unique<ui::EnvironmentPanel>());
     // Placeholders: replace each by its real panel (same title) when it exists.
-    panels_.push_back(std::make_unique<ui::PlaceholderPanel>(ui::kOutlinerTitle));
-    panels_.push_back(std::make_unique<ui::PlaceholderPanel>(ui::kInspectorTitle));
     panels_.push_back(std::make_unique<ui::PlaceholderPanel>(ui::kDmxMonitorTitle));
     panels_.push_back(std::make_unique<ui::LogPanel>());
 }
@@ -341,6 +348,7 @@ void App::drawMainMenu() {
         if (ImGui::MenuItem(redoLabel.c_str(), "Ctrl+Y", false, commands_.canRedo())) redo();
         ImGui::EndMenu();
     }
+    ui::drawStageMenu(*context_);  // "Add" and "Tools"
     if (ImGui::BeginMenu("View")) {
         for (const std::unique_ptr<ui::Panel>& panel : panels_) ImGui::MenuItem(panel->title(), nullptr, &panel->open);
         ImGui::Separator();
@@ -396,7 +404,7 @@ void App::newProject() {
 }
 
 bool App::openProject(const std::filesystem::path& file) {
-    const ProjectParts parts{scene_, environment_, dmx_, fixtures_, dataDir_ / "fixtures"};
+    const ProjectParts parts{scene_, environment_, dmx_, fixtures_, dataDir_ / "fixtures", &renderer_.settings()};
     std::string error;
     if (!loadProjectFrom(parts, file, error)) {
         log::error("app", "cannot open {}: {}", file.string(), error);
@@ -411,7 +419,7 @@ bool App::openProject(const std::filesystem::path& file) {
 }
 
 bool App::saveToFile(const std::filesystem::path& file) {
-    const ProjectParts parts{scene_, environment_, dmx_, fixtures_, dataDir_ / "fixtures"};
+    const ProjectParts parts{scene_, environment_, dmx_, fixtures_, dataDir_ / "fixtures", &renderer_.settings()};
     std::string error;
     if (!app::saveProjectTo(parts, file, error)) {
         log::error("app", "cannot save {}: {}", file.string(), error);
