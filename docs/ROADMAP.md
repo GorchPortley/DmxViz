@@ -14,10 +14,10 @@ owner after review.
 ## Milestone 1 – Subsystems (parallel)
 | Stream | Scope | Status |
 |--------|-------|--------|
-| WS1 DMX | UniverseStore + merge, Art-Net, sACN, Enttec Pro, Open DMX, loopback, serial/NIC enumeration, DmxManager, tests | ⏳ |
-| WS2 Fixtures | FixtureType model, native format + spec, library, OFL + GDTF import, runtime decode + physics, starter library, tests | ⏳ |
-| WS3 Render | G-buffer, spot lighting with gobos, volumetric beams, glow, bloom, tonemap, gobo atlas, render sandbox | ⏳ |
-| WS4 Stage | Scene graph, commands/undo, truss + deck builders, model loaders, picking, project files, tests | ⏳ |
+| WS1 DMX | UniverseStore + merge, Art-Net, sACN, Enttec Pro, Open DMX, loopback, serial/NIC enumeration, DmxManager, tests | ✅ |
+| WS2 Fixtures | FixtureType model, native format + spec, library, OFL + GDTF import, runtime decode + physics, starter library, tests | ✅ (7 more starter fixtures pending) |
+| WS3 Render | G-buffer, spot lighting with gobos, volumetric beams, glow, bloom, tonemap, gobo atlas, render sandbox | ✅ |
+| WS4 Stage | Scene graph, commands/undo, truss + deck builders, model loaders, picking, project files, tests | ✅ |
 
 ## Milestone 2 – Integration & UI
 - [ ] Simulation glue (stage + fixtures + DMX → RenderScene)
@@ -31,6 +31,16 @@ owner after review.
 - [ ] Performance pass against NFR-1 (profiling, half-res tuning)
 - [ ] Code review and refactor pass
 - [ ] User guide
+
+## Known issues
+- Prism facet x axis: fixtures write facet x to beam-local +X, the renderer's "right" is direction × up = local −X.
+  Asymmetric prism patterns render mirrored. Fix in the fixtures module (negate x) with a test.
+- GDTF: only the first DMX break is imported; wheel shake/half-slot positions not modelled.
+
+## Process notes
+Agents are tiered to stay within usage limits: the integration owner (Opus) plans, reviews and merges;
+implementation agents run on Sonnet; mechanical content (fixture files, artwork, docs) on Haiku. At most
+two agents run concurrently, each with a narrow brief, and briefs require filtered build/test output.
 
 ## Later
 - Beam shadows (shadow-map atlas)

@@ -12,5 +12,6 @@
 
 ## Rationale
 Y-up matches glTF and OpenGL conventions, so models import without conversion.
-GDTF (Z up, millimetres) converts with `(x, y, z)_gdtf → (x, z, -y)·0.001`.
+GDTF (Z up, metres) converts with `(x, y, z)_gdtf → (x, z, -y)`. (MVR scene files use millimetres;
+GDTF geometry is in metres. The importer treats implausibly large GDTF values as millimetres with a warning.)
 The hanging convention matches GDTF so imported geometry trees keep their meaning.
