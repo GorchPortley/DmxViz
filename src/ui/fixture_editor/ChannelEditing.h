@@ -1,0 +1,126 @@
+#pragma once
+// ChannelEditing: edits of DMX modes, channels, channel functions, wheels and resources.
+//
+// The fixture editor's widgets call these instead of poking the data directly, so rules like
+// "changing 8 bit to 16 bit rescales the function ranges" live in one tested place.
+// No ImGui in here.
+
+#include "fixtures/FixtureType.h"
+
+#include <cstdint>
+#include <filesystem>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace dmxviz::ui::fixture_editor {
+
+// ---- names ------------------------------------------------------------------------------------
+
+// `base` if it is not in `existing`, else "base 2", "base 3"...
+std::string uniqueName(std::string_view base, const std::vector<std::string>& existing);
+
+// ---- channels ---------------------------------------------------------------------------------
+
+// Highest DMX value of a channel with this many bytes (255, 65535, 16777215).
+std::uint32_t maxDmxValue(int bytes);
+
+// A function over [dmxFrom, dmxTo] with the usual kind and physical range of the attribute.
+fixtures::ChannelFunction makeFunction(fixtures::Attribute attribute, std::uint32_t dmxFrom, std::uint32_t dmxTo);
+
+// A channel with one function spanning its whole range. Offsets are firstOffset, firstOffset + 1...
+fixtures::Channel makeChannel(std::string name, fixtures::Attribute attribute, int bytes, int firstOffset,
+                              std::string geometry = {});
+
+// Appends `channel` after the highest used offset (its own offsets are replaced, the byte count is
+// kept) and grows the footprint. Returns the stored channel.
+fixtures::Channel& appendChannel(fixtures::DmxMode& mode, fixtures::Channel channel);
+
+// footprint = highest used offset.
+void updateFootprint(fixtures::DmxMode& mode);
+
+// Gives every channel consecutive offsets in list order (removes gaps) and updates the footprint.
+void renumberOffsets(fixtures::DmxMode& mode);
+
+// Changes a channel to 1..3 bytes. Extra offsets go after the highest used one, default, highlight
+// and function ranges are rescaled to the new resolution. Updates the footprint.
+void setChannelBytes(fixtures::DmxMode& mode, std::size_t channelIndex, int bytes);
+
+// Sets offset `slot` (0 = coarse, 1 = fine, 2 = ultra) of a channel. A value of 0 for the fine or ultra
+// byte removes it (and the ones after it). Adding bytes rescales values like setChannelBytes().
+// The coarse offset cannot be removed here. Grows the footprint when the offset lies beyond it.
+void setChannelOffset(fixtures::DmxMode& mode, std::size_t channelIndex, int slot, int value);
+
+// Points the channel's functions at another attribute. A channel with a single function also takes the
+// usual kind and physical range of the new attribute; DMX ranges and names are kept.
+void setChannelAttribute(fixtures::Channel& channel, fixtures::Attribute attribute);
+
+// A new channel for `attribute` with sensible defaults: 16 bit for Pan/Tilt, the geometry it usually
+// controls, a centred default position. Offsets are placeholders (appendChannel assigns them).
+fixtures::Channel newChannelFor(const fixtures::FixtureType& type, fixtures::Attribute attribute);
+
+// Stretches function ranges so that they tile 0..max without gaps or overlaps (in DMX order).
+void closeFunctionGaps(fixtures::Channel& channel);
+
+// Replaces the functions of a channel by one wheel-slot function per slot of `wheel`.
+void fillWheelFunctions(fixtures::Channel& channel, const fixtures::Wheel& wheel, fixtures::Attribute attribute);
+
+// The physical range (memory units: radians for Pan/Tilt) of the first linear function of an attribute,
+// looking through all modes. This is how the editor shows the "pan/tilt range" of a fixture.
+struct PhysicalRange {
+    float from = 0.0f;
+    float to = 0.0f;
+};
+std::optional<PhysicalRange> attributeRange(const fixtures::FixtureType& type, fixtures::Attribute attribute);
+// Sets that range on every linear function of the attribute in all modes. Returns how many changed.
+int setAttributeRange(fixtures::FixtureType& type, fixtures::Attribute attribute, float from, float to);
+
+// Adds one channel per attribute for every cell, or - with perCell = false - one channel per attribute
+// that drives the geometry group `groupName` (created from the cells; ignored when empty).
+void addCellChannels(fixtures::FixtureType& type, fixtures::DmxMode& mode, const std::vector<std::string>& cells,
+                     const std::vector<fixtures::Attribute>& attributes, bool perCell, const std::string& groupName);
+
+// A copy of `mode` named "<name> copy" (made unique among the type's modes).
+fixtures::DmxMode duplicateMode(const fixtures::FixtureType& type, const fixtures::DmxMode& mode);
+
+// ---- wheels -----------------------------------------------------------------------------------
+
+fixtures::WheelSlot makeSlot(fixtures::SlotKind kind, int slotNumber);
+// Renames a wheel and the channel functions that use it. False when the name is empty or taken.
+bool renameWheel(fixtures::FixtureType& type, std::size_t wheelIndex, const std::string& newName);
+
+// ---- emitters and categories ------------------------------------------------------------------
+
+// Adds an emitter named "Emitter", "Emitter 2"... (white, no wavelength). Returns its index.
+std::size_t addEmitter(fixtures::FixtureType& type);
+// Renames an emitter and the channel functions that name it. False when the name is empty or taken.
+bool renameEmitter(fixtures::FixtureType& type, std::size_t emitterIndex, const std::string& newName);
+
+// "Moving Head, Color Changer" <-> {"Moving Head", "Color Changer"}. Splitting trims blanks and drops empties.
+std::string joinCategories(const std::vector<std::string>& categories);
+std::vector<std::string> splitCategories(std::string_view text);
+
+// ---- resources --------------------------------------------------------------------------------
+
+// A picked file, ready to become a fixture resource.
+struct ImportedFile {
+    std::string name;    // file name without extension
+    std::string format;  // "png", "jpg", "svg"...
+    std::vector<std::uint8_t> data;
+};
+
+// Reads a PNG / JPG / SVG gobo image and checks that it decodes. Nothing on failure.
+std::optional<ImportedFile> readImageFile(const std::filesystem::path& file, std::string* error);
+
+// Reads a 3D model file (GLB, GLTF, OBJ, 3DS) for use as a geometry's mesh. Nothing on failure.
+std::optional<ImportedFile> readModelFile(const std::filesystem::path& file, std::string* error);
+
+// Stores bytes as a resource with a name that is unique in the type. Returns that name.
+std::string addResource(fixtures::FixtureType& type, std::string_view suggestedName, std::string_view format,
+                        std::vector<std::uint8_t> data);
+
+// Drops resources that no slot and no model refers to. Returns how many were removed.
+int removeUnusedResources(fixtures::FixtureType& type);
+
+}  // namespace dmxviz::ui::fixture_editor

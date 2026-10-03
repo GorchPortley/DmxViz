@@ -38,6 +38,7 @@ void ensureDefaultDockLayout(unsigned int dockspaceId, bool force) {
     ImGui::DockBuilderDockWindow(kDmxInterfacesTitle, bottom);
     ImGui::DockBuilderDockWindow(kLogTitle, bottom);
     ImGui::DockBuilderDockWindow(kViewportTitle, rest);
+    ImGui::DockBuilderDockWindow(kFixtureEditorTitle, rest);  // tab next to the Viewport
     ImGui::DockBuilderFinish(dockspaceId);
 }
 
