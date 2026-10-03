@@ -32,6 +32,8 @@ public:
     // Fit the camera around a box, keeping the current view direction.
     void frame(const Aabb& bounds);
     void setPreset(Preset preset, const Aabb& stageBounds);
+    // Puts the camera at `eye` looking at `target` (camera presets). Ignores a degenerate pair.
+    void lookFromTo(const glm::vec3& eye, const glm::vec3& target);
 
     // Builds view/projection for the given aspect ratio (width / height).
     render::Camera camera(float aspect) const;

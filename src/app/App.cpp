@@ -19,6 +19,7 @@
 #include "dmx/interfaces/SacnInterface.h"
 #include "stage/ProjectFile.h"
 #include "ui/DockLayout.h"
+#include "ui/InspectorPanel.h"
 #include "ui/LogPanel.h"
 #include "ui/OutlinerPanel.h"
 #include "ui/PanelTitles.h"
@@ -199,7 +200,7 @@ void App::createPanels() {
     context_->viewportCamera = &viewport_->camera();
 
     panels_.push_back(std::make_unique<ui::OutlinerPanel>());
-    panels_.push_back(std::make_unique<ui::PlaceholderPanel>(ui::kInspectorTitle));
+    panels_.push_back(std::make_unique<ui::InspectorPanel>());
     // Placeholders: replace each by its real panel (same title) when it exists.
     panels_.push_back(std::make_unique<ui::PlaceholderPanel>(ui::kDmxMonitorTitle));
     panels_.push_back(std::make_unique<ui::LogPanel>());
