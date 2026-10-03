@@ -82,6 +82,8 @@ private:
     float gridStep_ = 0.25f;   // metres
     float angleStep_ = 15.0f;  // degrees
 
+    bool gizmoShown_ = false;  // the gizmo was updated this frame
+
     // Gizmo drag in progress: world matrices at the start, so the result never drifts.
     bool dragging_ = false;
     glm::mat4 dragStartPivot_{1.0f};

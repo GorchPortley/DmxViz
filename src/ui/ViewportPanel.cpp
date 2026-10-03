@@ -1,5 +1,6 @@
 #include "ui/ViewportPanel.h"
 
+#include "core/Log.h"
 #include "ui/EditorContext.h"
 #include "ui/PanelTitles.h"
 
@@ -162,6 +163,7 @@ std::vector<NodeId> ViewportPanel::editableSelection(const EditorContext& ctx) c
 }
 
 void ViewportPanel::handleGizmo(EditorContext& ctx, const ViewRect& rect, const render::Camera& cam, bool cameraBusy) {
+    gizmoShown_ = false;
     const std::vector<NodeId> targets = editableSelection(ctx);
     if (targets.empty()) {
         if (dragging_) endGizmoDrag(ctx);
@@ -192,6 +194,7 @@ void ViewportPanel::handleGizmo(EditorContext& ctx, const ViewRect& rect, const 
     glm::mat4 manipulated = pivot;
     const bool changed = ImGuizmo::Manipulate(&cam.view[0][0], &cam.projection[0][0], operation, mode,
                                               &manipulated[0][0], nullptr, snapEnabled_ ? snapValues : nullptr);
+    gizmoShown_ = true;
     const bool gizmoActive = ImGuizmo::IsUsing();
     if (gizmoActive && !dragging_) beginGizmoDrag(ctx, targets, pivot);
     if (dragging_ && changed) applyGizmoDrag(ctx, manipulated);
@@ -204,6 +207,7 @@ void ViewportPanel::beginGizmoDrag(EditorContext& ctx, const std::vector<NodeId>
     dragStartWorlds_.clear();
     for (NodeId id : targets) dragStartWorlds_.emplace_back(id, ctx.scene.worldMatrix(id));
     ctx.commands.breakMerge();  // this drag must not merge into an earlier edit
+    log::debug("ui", "gizmo drag started on {} node(s)", targets.size());
 }
 
 void ViewportPanel::applyGizmoDrag(EditorContext& ctx, const glm::mat4& newPivot) {
@@ -225,6 +229,7 @@ void ViewportPanel::endGizmoDrag(EditorContext& ctx) {
     dragging_ = false;
     dragStartWorlds_.clear();
     ctx.commands.breakMerge();
+    log::debug("ui", "gizmo drag finished, undo steps: {}", ctx.commands.undoCount());
 }
 
 // ---------------------------------------------------------------------------
@@ -242,7 +247,8 @@ NodeId ViewportPanel::pickAt(EditorContext& ctx, const ViewRect& rect, float asp
 void ViewportPanel::handleSelection(EditorContext& ctx, const ViewRect& rect, float aspect, bool hovered,
                                     bool cameraBusy) {
     const ImGuiIO& io = ImGui::GetIO();
-    const bool gizmoBusy = ImGuizmo::IsOver() || ImGuizmo::IsUsing() || dragging_;
+    // ImGuizmo's state is only fresh in frames where the gizmo was actually updated.
+    const bool gizmoBusy = dragging_ || (gizmoShown_ && (ImGuizmo::IsOver() || ImGuizmo::IsUsing()));
 
     if (hovered && !gizmoBusy && !io.KeyAlt && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
         pressActive_ = true;
@@ -255,8 +261,9 @@ void ViewportPanel::handleSelection(EditorContext& ctx, const ViewRect& rect, fl
         const float dx = io.MousePos.x - pressPos_.x;
         const float dy = io.MousePos.y - pressPos_.y;
         const bool isClick = dx * dx + dy * dy <= kClickMaxMovePixels * kClickMaxMovePixels;
-        if (isClick && !cameraBusy && !ImGuizmo::IsUsing()) {
+        if (isClick && !cameraBusy && !dragging_) {
             const NodeId hit = pickAt(ctx, rect, aspect, io.MousePos);
+            log::debug("ui", "viewport click picked node {}", hit);
             if (hit != kInvalidNode) {
                 if (io.KeyCtrl)
                     ctx.selection.toggle(hit);
@@ -313,6 +320,7 @@ void ViewportPanel::deleteSelection(EditorContext& ctx) {
     ctx.commands.execute(std::make_unique<stage::DeleteNodesCommand>(ids));
     ctx.selection.setHover(kInvalidNode);
     ctx.selection.prune(ctx.scene);
+    log::debug("ui", "deleted {} node(s)", ids.size());
 }
 
 void ViewportPanel::duplicateSelection(EditorContext& ctx) {
@@ -322,6 +330,7 @@ void ViewportPanel::duplicateSelection(EditorContext& ctx) {
     if (done != nullptr) {
         const std::vector<NodeId> copies = done->resultNodes();
         if (!copies.empty()) ctx.selection.setMany(copies);
+        log::debug("ui", "duplicated {} node(s)", copies.size());
     }
 }
 
