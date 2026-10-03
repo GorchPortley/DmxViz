@@ -128,6 +128,41 @@ void DeleteNodesCommand::revert(Scene& scene) {
 
 // ---- ReparentCommand ---------------------------------------------------------
 
+namespace {
+
+// Scene::setParent counts its index with the moved node already taken out. The reparent index
+// additionally leaves out every other dragged node, because those are not placed yet: they may
+// still sit in the new parent's list and would shift the position (the sibling off-by-one).
+
+// Slot of the first dragged node: just before the `cleanIndex`-th child that is not dragged.
+int firstSlot(const Scene& scene, NodeId parent, NodeId moving, const std::unordered_set<NodeId>& dragged,
+              int cleanIndex) {
+    int slot = 0;
+    int clean = 0;
+    for (NodeId sibling : scene.childrenOf(parent)) {
+        if (sibling == moving) continue;
+        if (!dragged.count(sibling)) {
+            if (clean == cleanIndex) return slot;
+            ++clean;
+        }
+        ++slot;
+    }
+    return -1;  // fewer clean children than the index: append
+}
+
+// Slot right behind `previous`, the dragged node that was placed just before this one.
+int slotAfter(const Scene& scene, NodeId parent, NodeId moving, NodeId previous) {
+    int slot = 0;
+    for (NodeId sibling : scene.childrenOf(parent)) {
+        if (sibling == moving) continue;
+        ++slot;
+        if (sibling == previous) return slot;
+    }
+    return -1;
+}
+
+}  // namespace
+
 ReparentCommand::ReparentCommand(std::vector<NodeId> ids, NodeId newParent, int index, bool keepWorld)
     : ids_(std::move(ids)), newParent_(newParent), index_(index), keepWorld_(keepWorld) {}
 
@@ -139,15 +174,20 @@ bool ReparentCommand::apply(Scene& scene) {
     for (NodeId id : ids) {
         if (id == newParent_ || scene.isAncestor(id, newParent_)) return false;  // would create a cycle
     }
-    int k = 0;
+    const std::unordered_set<NodeId> dragged(ids.begin(), ids.end());
+    NodeId previous = kInvalidNode;  // the dragged node placed last; the next one goes behind it
     for (NodeId id : ids) {
         const Node* n = scene.find(id);
         Moved m{id, n->parent(), scene.indexInParent(id), n->transform()};
         const glm::mat4 world = scene.worldMatrix(id);
-        scene.setParent(id, newParent_, index_ < 0 ? -1 : index_ + k);
+        int slot = -1;
+        if (index_ >= 0)
+            slot = previous == kInvalidNode ? firstSlot(scene, newParent_, id, dragged, index_)
+                                            : slotAfter(scene, newParent_, id, previous);
+        scene.setParent(id, newParent_, slot);
         if (keepWorld_ && m.oldParent != newParent_) scene.setTransform(id, scene.localFromWorld(newParent_, world));
         moved_.push_back(m);
-        ++k;
+        previous = id;
     }
     return true;
 }
