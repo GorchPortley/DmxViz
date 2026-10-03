@@ -1,5 +1,7 @@
 #include "dmx/interfaces/OpenDmxInterface.h"
 
+#include "dmx/interfaces/ConfigJson.h"
+
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
@@ -70,8 +72,11 @@ nlohmann::json OpenDmxInterface::saveConfig() const {
 
 bool OpenDmxInterface::loadConfig(const nlohmann::json& settings, std::string& error) {
     try {
+        int refreshRate = 30;
+        if (!config::readInt(settings, "refreshRate", -1000000, 1000000, refreshRate, error))
+            return false;  // clamped below
         setPortPath(settings.value("port", std::string()));
-        setRefreshRate(settings.value("refreshRate", 30));
+        setRefreshRate(refreshRate);
         return true;
     } catch (const nlohmann::json::exception& e) {
         error = std::format("Open DMX settings: {}", e.what());

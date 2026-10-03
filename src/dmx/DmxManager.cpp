@@ -1,11 +1,13 @@
 #include "dmx/DmxManager.h"
 
 #include "core/Log.h"
+#include "dmx/interfaces/ConfigJson.h"
 
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <format>
 #include <set>
 #include <system_error>
@@ -17,6 +19,8 @@ using namespace std::chrono_literals;
 
 constexpr auto kKeepAlive = 1s;  // unchanged universes are still sent this often
 constexpr int kConfigVersion = 1;
+constexpr std::size_t kMaxConfiguredInterfaces = 256;  // a project file must not be able to create millions
+constexpr std::size_t kMaxConfiguredRoutes = 65536;
 
 const char* programmerModeName(ProgrammerMode mode) {
     return mode == ProgrammerMode::Override ? "override" : "merge";
@@ -161,6 +165,7 @@ void DmxManager::removeRoute(const OutputRoute& route) {
 }
 
 void DmxManager::setOutputRate(double hz) {
+    if (!std::isfinite(hz)) return;  // NaN would poison the output thread's period computation
     outputRate_.store(std::clamp(hz, kMinOutputRate, kMaxOutputRate));
 }
 
@@ -278,17 +283,25 @@ bool DmxManager::loadConfig(const nlohmann::json& config, std::string& error) {
             error = "DMX configuration must be a JSON object";
             return false;
         }
-        const int version = config.value("formatVersion", kConfigVersion);
+        int version = kConfigVersion;
+        if (!config::readInt(config, "formatVersion", 0, 1000000, version, error)) return false;
         if (version > kConfigVersion) {
             error = std::format("DMX configuration version {} is newer than supported ({})", version, kConfigVersion);
             return false;
         }
 
+        const nlohmann::json interfaceEntries = config.value("interfaces", nlohmann::json::array());
+        if (interfaceEntries.size() > kMaxConfiguredInterfaces) {
+            error = std::format("more than {} DMX interfaces", kMaxConfiguredInterfaces);
+            return false;
+        }
         std::set<InterfaceId> ids;
-        for (const nlohmann::json& entry : config.value("interfaces", nlohmann::json::array())) {
+        for (const nlohmann::json& entry : interfaceEntries) {
             const std::string type = entry.at("type").get<std::string>();
-            const long long id = entry.at("id").get<long long>();
-            if (id < 1 || id > 0xFFFFFFFFLL || !ids.insert(static_cast<InterfaceId>(id)).second) {
+            entry.at("id");  // required: throws a readable error when missing
+            int id = 0;
+            if (!config::readInt(entry, "id", 1, 0x7FFFFFFF, id, error)) return false;
+            if (!ids.insert(static_cast<InterfaceId>(id)).second) {
                 error = std::format("invalid or duplicate interface id {}", id);
                 return false;
             }
@@ -310,16 +323,22 @@ bool DmxManager::loadConfig(const nlohmann::json& config, std::string& error) {
             created.push_back(std::move(iface));
         }
 
-        for (const nlohmann::json& entry : config.value("routes", nlohmann::json::array())) {
-            const int universe = entry.at("universe").get<int>();
-            const long long id = entry.at("interface").get<long long>();
-            if (universe < 1 || universe > 0xFFFF) {
-                error = std::format("route with invalid universe {}", universe);
-                return false;
-            }
-            const bool known =
-                std::any_of(created.begin(), created.end(), [&](const auto& iface) { return iface->id() == id; });
-            if (known) newRoutes.push_back({static_cast<UniverseId>(universe), static_cast<InterfaceId>(id)});
+        const nlohmann::json routeEntries = config.value("routes", nlohmann::json::array());
+        if (routeEntries.size() > kMaxConfiguredRoutes) {
+            error = std::format("more than {} DMX routes", kMaxConfiguredRoutes);
+            return false;
+        }
+        for (const nlohmann::json& entry : routeEntries) {
+            entry.at("universe");
+            entry.at("interface");
+            int universe = 0;
+            int id = 0;
+            if (!config::readInt(entry, "universe", 1, 0xFFFF, universe, error)) return false;
+            if (!config::readInt(entry, "interface", 0, 0x7FFFFFFF, id, error)) return false;
+            const auto interfaceId = static_cast<InterfaceId>(id);
+            const bool known = std::any_of(created.begin(), created.end(),
+                                           [&](const auto& iface) { return iface->id() == interfaceId; });
+            if (known) newRoutes.push_back({static_cast<UniverseId>(universe), interfaceId});
         }
 
         const std::string modeName = config.value("programmerMode", std::string("merge"));
@@ -331,7 +350,9 @@ bool DmxManager::loadConfig(const nlohmann::json& config, std::string& error) {
 
         rate = config.value("outputRateHz", kDefaultOutputRate);
         outputOn = config.value("outputEnabled", true);
-        timeoutMs = std::clamp<long long>(config.value("sourceTimeoutMs", timeoutMs), 100, 60000);
+        // Read as double and clamp: converting a huge JSON float to an integer is undefined behaviour.
+        const double timeout = config.value("sourceTimeoutMs", static_cast<double>(timeoutMs));
+        timeoutMs = static_cast<long long>(std::clamp(timeout, 100.0, 60000.0));
         hold = config.value("holdLastLook", true);
     } catch (const nlohmann::json::exception& e) {
         error = std::format("DMX configuration: {}", e.what());

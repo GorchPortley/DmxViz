@@ -1,5 +1,7 @@
 #include "dmx/interfaces/EnttecProInterface.h"
 
+#include "dmx/interfaces/ConfigJson.h"
+
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
@@ -110,11 +112,8 @@ nlohmann::json EnttecProInterface::saveConfig() const {
 
 bool EnttecProInterface::loadConfig(const nlohmann::json& settings, std::string& error) {
     try {
-        const int universe = settings.value("inputUniverse", 1);
-        if (universe < 1 || universe > 0xFFFF) {
-            error = std::format("invalid input universe {}", universe);
-            return false;
-        }
+        int universe = 1;
+        if (!config::readInt(settings, "inputUniverse", 1, 0xFFFF, universe, error)) return false;
         setPortPath(settings.value("port", std::string()));
         setInputUniverse(static_cast<UniverseId>(universe));
         return true;

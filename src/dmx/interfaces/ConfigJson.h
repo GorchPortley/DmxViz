@@ -9,12 +9,36 @@
 
 #include <nlohmann/json.hpp>
 
+#include <cstddef>
 #include <cstdint>
 #include <format>
 #include <string>
 #include <vector>
 
 namespace dmxviz::dmx::config {
+
+// Settings come from project files, so lists and numbers are bounded here instead of trusted.
+inline constexpr std::size_t kMaxListEntries = 4096;
+inline constexpr int kMaxUniverseOffset = 0xFFFF;  // larger offsets cannot map any universe anyway
+
+// Integer within [minValue, maxValue]. A JSON number outside the range (or a float such as
+// 1e300, whose conversion to int would be undefined behaviour) is rejected, not truncated.
+inline bool readInt(const nlohmann::json& json, const char* key, long long minValue, long long maxValue, int& out,
+                    std::string& error) {
+    if (!json.contains(key)) return true;  // keep the default
+    const nlohmann::json& value = json.at(key);
+    if (!value.is_number()) {
+        error = std::format("'{}' must be a number", key);
+        return false;
+    }
+    const double number = value.get<double>();
+    if (!(number >= static_cast<double>(minValue) && number <= static_cast<double>(maxValue))) {  // also rejects NaN
+        error = std::format("'{}' must be between {} and {}", key, minValue, maxValue);
+        return false;
+    }
+    out = static_cast<int>(number);
+    return true;
+}
 
 inline bool readAddress(const nlohmann::json& json, const char* key, Ipv4Address& out, std::string& error) {
     if (!json.contains(key)) return true;  // keep the default
@@ -37,6 +61,10 @@ inline nlohmann::json endpointsToJson(const std::vector<Endpoint>& endpoints) {
 inline bool readEndpoints(const nlohmann::json& json, const char* key, std::uint16_t defaultPort,
                           std::vector<Endpoint>& out, std::string& error) {
     if (!json.contains(key)) return true;
+    if (json.at(key).size() > kMaxListEntries) {
+        error = std::format("'{}' has more than {} entries", key, kMaxListEntries);
+        return false;
+    }
     std::vector<Endpoint> result;
     for (const auto& item : json.at(key)) {
         const auto endpoint = Endpoint::parse(item.get<std::string>(), defaultPort);
@@ -54,6 +82,10 @@ inline bool readEndpoints(const nlohmann::json& json, const char* key, std::uint
 inline bool readUniverses(const nlohmann::json& json, const char* key, int minValue, int maxValue,
                           std::vector<std::uint16_t>& out, std::string& error) {
     if (!json.contains(key)) return true;
+    if (json.at(key).size() > kMaxListEntries) {
+        error = std::format("'{}' has more than {} entries", key, kMaxListEntries);
+        return false;
+    }
     std::vector<std::uint16_t> result;
     for (const auto& item : json.at(key)) {
         const int value = item.get<int>();
