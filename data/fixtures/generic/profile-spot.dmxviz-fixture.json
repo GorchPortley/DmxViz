@@ -1,0 +1,678 @@
+{
+  "formatVersion": 1,
+  "id": "generic/profile-spot",
+  "manufacturer": "Generic",
+  "name": "Profile Spot",
+  "shortName": "Profile",
+  "description": "Generic CMY profile moving head: colour wheel, two gobo wheels (the first rotates), rotating 3-facet prism, iris, frost, focus, 8-42 degree zoom and four framing blades. 16-bit pan and tilt.",
+  "source": "native",
+  "revision": "1",
+  "categories": ["Moving Head"],
+  "physical": {
+    "weight": 24,
+    "power": 650,
+    "dimensions": [0.37, 0.62, 0.3],
+    "dimmerCurve": "linear",
+    "movement": {
+      "panMaxSpeed": 216,
+      "tiltMaxSpeed": 180,
+      "panAcceleration": 600,
+      "tiltAcceleration": 600,
+      "wheelSlotsPerSecond": 8,
+      "indexRotationSpeed": 720
+    }
+  },
+  "wheels": [
+    {
+      "name": "Color wheel",
+      "slots": [
+        {"type": "open", "name": "Open"},
+        {"type": "color", "name": "Red", "color": "#e4002b"},
+        {"type": "color", "name": "Orange", "color": "#ff6900"},
+        {"type": "color", "name": "Yellow", "color": "#ffd100"},
+        {"type": "color", "name": "Green", "color": "#00a651"},
+        {"type": "color", "name": "Cyan", "color": "#00aeef"},
+        {"type": "color", "name": "Blue", "color": "#1d3d9f"},
+        {"type": "color", "name": "Magenta", "color": "#c2185b"},
+        {"type": "color", "name": "CTO", "color": "#ffae6e"}
+      ]
+    },
+    {
+      "name": "Gobo wheel 1",
+      "slots": [
+        {"type": "open", "name": "Open"},
+        {"type": "gobo", "name": "Dots", "image": "dots"},
+        {"type": "gobo", "name": "Star", "image": "star"},
+        {"type": "gobo", "name": "Breakup", "image": "breakup"},
+        {"type": "gobo", "name": "Lines", "image": "lines"},
+        {"type": "gobo", "name": "Tunnel", "image": "tunnel"}
+      ]
+    },
+    {
+      "name": "Gobo wheel 2",
+      "slots": [
+        {"type": "open", "name": "Open"},
+        {"type": "gobo", "name": "Flower", "image": "flower"},
+        {"type": "gobo", "name": "Triangle", "image": "triangle"},
+        {"type": "gobo", "name": "Spiral", "image": "spiral"}
+      ]
+    },
+    {
+      "name": "Prism wheel",
+      "slots": [
+        {"type": "open", "name": "Open"},
+        {"type": "prism", "name": "3-facet", "facetCount": 3, "deflection": 5}
+      ]
+    }
+  ],
+  "geometry": {
+    "name": "Base",
+    "type": "generic",
+    "position": [0, -0.07, 0],
+    "model": {"primitive": "base", "size": [0.37, 0.14, 0.3]},
+    "children": [
+      {
+        "name": "Yoke",
+        "type": "axis",
+        "position": [0, -0.3, 0],
+        "model": {"primitive": "yoke", "size": [0.36, 0.48, 0.11]},
+        "children": [
+          {
+            "name": "Head",
+            "type": "axis",
+            "position": [0, -0.045, 0],
+            "model": {"primitive": "head", "size": [0.26, 0.36, 0.26]},
+            "children": [
+              {
+                "name": "Beam",
+                "type": "beam",
+                "position": [0, -0.18, 0],
+                "beam": {
+                  "type": "spot",
+                  "lensRadius": 0.08,
+                  "beamAngle": 25,
+                  "fieldAngle": 32,
+                  "luminousFlux": 18000,
+                  "colorTemperature": 6800
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "modes": [
+    {
+      "name": "Standard",
+      "description": "29 DMX channels, 16-bit pan/tilt, framing blades",
+      "footprint": 29,
+      "channels": [
+        {
+          "name": "Pan",
+          "offsets": [1, 2],
+          "geometry": "Yoke",
+          "default": 32768,
+          "functions": [
+            {"name": "Pan 540 degrees", "attribute": "Pan", "physical": [-270, 270]}
+          ]
+        },
+        {
+          "name": "Tilt",
+          "offsets": [3, 4],
+          "geometry": "Head",
+          "default": 32768,
+          "functions": [
+            {"name": "Tilt 270 degrees", "attribute": "Tilt", "physical": [-135, 135]}
+          ]
+        },
+        {
+          "name": "Shutter / Strobe",
+          "offsets": [5],
+          "geometry": "Beam",
+          "default": 32,
+          "functions": [
+            {"name": "Closed", "attribute": "Shutter1", "kind": "shutterClosed", "dmx": [0, 31]},
+            {"name": "Open", "attribute": "Shutter1", "kind": "shutterOpen", "dmx": [32, 63]},
+            {"name": "Strobe slow to fast", "attribute": "Shutter1Strobe", "dmx": [64, 95], "physical": [1, 20]},
+            {"name": "Open", "attribute": "Shutter1", "kind": "shutterOpen", "dmx": [96, 127]},
+            {"name": "Pulse slow to fast", "attribute": "Shutter1StrobePulse", "dmx": [128, 159], "physical": [1, 10]},
+            {"name": "Open", "attribute": "Shutter1", "kind": "shutterOpen", "dmx": [160, 191]},
+            {"name": "Random strobe", "attribute": "Shutter1StrobeRandom", "dmx": [192, 223], "physical": [1, 20]},
+            {"name": "Open", "attribute": "Shutter1", "kind": "shutterOpen", "dmx": [224, 255]}
+          ]
+        },
+        {
+          "name": "Dimmer",
+          "offsets": [6],
+          "geometry": "Beam",
+          "default": 0,
+          "highlight": 255,
+          "functions": [
+            {"attribute": "Dimmer", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Cyan",
+          "offsets": [7],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Cyan 0-100%", "attribute": "ColorSub_C", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Magenta",
+          "offsets": [8],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Magenta 0-100%", "attribute": "ColorSub_M", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Yellow",
+          "offsets": [9],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Yellow 0-100%", "attribute": "ColorSub_Y", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Color wheel",
+          "offsets": [10],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Open", "attribute": "Color1", "dmx": [0, 13], "wheel": "Color wheel", "slot": 1},
+            {"name": "Red", "attribute": "Color1", "dmx": [14, 27], "wheel": "Color wheel", "slot": 2},
+            {"name": "Orange", "attribute": "Color1", "dmx": [28, 41], "wheel": "Color wheel", "slot": 3},
+            {"name": "Yellow", "attribute": "Color1", "dmx": [42, 55], "wheel": "Color wheel", "slot": 4},
+            {"name": "Green", "attribute": "Color1", "dmx": [56, 70], "wheel": "Color wheel", "slot": 5},
+            {"name": "Cyan", "attribute": "Color1", "dmx": [71, 84], "wheel": "Color wheel", "slot": 6},
+            {"name": "Blue", "attribute": "Color1", "dmx": [85, 98], "wheel": "Color wheel", "slot": 7},
+            {"name": "Magenta", "attribute": "Color1", "dmx": [99, 112], "wheel": "Color wheel", "slot": 8},
+            {"name": "CTO", "attribute": "Color1", "dmx": [113, 127], "wheel": "Color wheel", "slot": 9},
+            {
+              "name": "Rainbow forward",
+              "attribute": "Color1WheelSpin",
+              "dmx": [128, 191],
+              "physical": [10, 360],
+              "wheel": "Color wheel"
+            },
+            {
+              "name": "Rainbow reverse",
+              "attribute": "Color1WheelSpin",
+              "dmx": [192, 255],
+              "physical": [-10, -360],
+              "wheel": "Color wheel"
+            }
+          ]
+        },
+        {
+          "name": "Gobo wheel 1",
+          "offsets": [11],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Open", "attribute": "Gobo1", "dmx": [0, 9], "wheel": "Gobo wheel 1", "slot": 1},
+            {"name": "Dots", "attribute": "Gobo1", "dmx": [10, 19], "wheel": "Gobo wheel 1", "slot": 2},
+            {"name": "Star", "attribute": "Gobo1", "dmx": [20, 29], "wheel": "Gobo wheel 1", "slot": 3},
+            {"name": "Breakup", "attribute": "Gobo1", "dmx": [30, 39], "wheel": "Gobo wheel 1", "slot": 4},
+            {"name": "Lines", "attribute": "Gobo1", "dmx": [40, 49], "wheel": "Gobo wheel 1", "slot": 5},
+            {"name": "Tunnel", "attribute": "Gobo1", "dmx": [50, 59], "wheel": "Gobo wheel 1", "slot": 6},
+            {
+              "name": "Wheel spin forward",
+              "attribute": "Gobo1WheelSpin",
+              "dmx": [60, 157],
+              "physical": [5, 180],
+              "wheel": "Gobo wheel 1"
+            },
+            {
+              "name": "Wheel spin reverse",
+              "attribute": "Gobo1WheelSpin",
+              "dmx": [158, 255],
+              "physical": [-5, -180],
+              "wheel": "Gobo wheel 1"
+            }
+          ]
+        },
+        {
+          "name": "Gobo 1 rotation",
+          "offsets": [12],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Index 0-360 degrees", "attribute": "Gobo1Pos", "dmx": [0, 127], "physical": [0, 360]},
+            {"name": "Spin forward", "attribute": "Gobo1PosRotate", "dmx": [128, 191], "physical": [0, 180]},
+            {"name": "Spin reverse", "attribute": "Gobo1PosRotate", "dmx": [192, 255], "physical": [0, -180]}
+          ]
+        },
+        {
+          "name": "Gobo wheel 2",
+          "offsets": [13],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Open", "attribute": "Gobo2", "dmx": [0, 9], "wheel": "Gobo wheel 2", "slot": 1},
+            {"name": "Flower", "attribute": "Gobo2", "dmx": [10, 19], "wheel": "Gobo wheel 2", "slot": 2},
+            {"name": "Triangle", "attribute": "Gobo2", "dmx": [20, 29], "wheel": "Gobo wheel 2", "slot": 3},
+            {"name": "Spiral", "attribute": "Gobo2", "dmx": [30, 39], "wheel": "Gobo wheel 2", "slot": 4},
+            {
+              "name": "Wheel spin forward",
+              "attribute": "Gobo2WheelSpin",
+              "dmx": [40, 147],
+              "physical": [5, 180],
+              "wheel": "Gobo wheel 2"
+            },
+            {
+              "name": "Wheel spin reverse",
+              "attribute": "Gobo2WheelSpin",
+              "dmx": [148, 255],
+              "physical": [-5, -180],
+              "wheel": "Gobo wheel 2"
+            }
+          ]
+        },
+        {
+          "name": "Prism",
+          "offsets": [14],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Out", "attribute": "Prism1", "dmx": [0, 127], "wheel": "Prism wheel", "slot": 1},
+            {"name": "3-facet in", "attribute": "Prism1", "dmx": [128, 255], "wheel": "Prism wheel", "slot": 2}
+          ]
+        },
+        {
+          "name": "Prism rotation",
+          "offsets": [15],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Index 0-360 degrees", "attribute": "Prism1Pos", "dmx": [0, 127], "physical": [0, 360]},
+            {"name": "Spin forward", "attribute": "Prism1PosRotate", "dmx": [128, 191], "physical": [0, 180]},
+            {"name": "Spin reverse", "attribute": "Prism1PosRotate", "dmx": [192, 255], "physical": [0, -180]}
+          ]
+        },
+        {
+          "name": "Iris",
+          "offsets": [16],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Open to closed", "attribute": "Iris", "physical": [1, 0.05]}
+          ]
+        },
+        {
+          "name": "Frost",
+          "offsets": [17],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Frost 0-100%", "attribute": "Frost1", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Focus",
+          "offsets": [18],
+          "geometry": "Beam",
+          "default": 255,
+          "functions": [
+            {"name": "Blurred to sharp", "attribute": "Focus1", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Zoom",
+          "offsets": [19],
+          "geometry": "Beam",
+          "default": 128,
+          "functions": [
+            {"name": "Zoom 8-42 degrees", "attribute": "Zoom", "physical": [8, 42]}
+          ]
+        },
+        {
+          "name": "Blade 1 insertion",
+          "offsets": [20],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Out to in", "attribute": "Blade1A", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Blade 1 angle",
+          "offsets": [21],
+          "geometry": "Beam",
+          "default": 128,
+          "functions": [
+            {"name": "-45 to +45 degrees", "attribute": "Blade1Rot", "physical": [-45, 45]}
+          ]
+        },
+        {
+          "name": "Blade 2 insertion",
+          "offsets": [22],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Out to in", "attribute": "Blade2A", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Blade 2 angle",
+          "offsets": [23],
+          "geometry": "Beam",
+          "default": 128,
+          "functions": [
+            {"name": "-45 to +45 degrees", "attribute": "Blade2Rot", "physical": [-45, 45]}
+          ]
+        },
+        {
+          "name": "Blade 3 insertion",
+          "offsets": [24],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Out to in", "attribute": "Blade3A", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Blade 3 angle",
+          "offsets": [25],
+          "geometry": "Beam",
+          "default": 128,
+          "functions": [
+            {"name": "-45 to +45 degrees", "attribute": "Blade3Rot", "physical": [-45, 45]}
+          ]
+        },
+        {
+          "name": "Blade 4 insertion",
+          "offsets": [26],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Out to in", "attribute": "Blade4A", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Blade 4 angle",
+          "offsets": [27],
+          "geometry": "Beam",
+          "default": 128,
+          "functions": [
+            {"name": "-45 to +45 degrees", "attribute": "Blade4Rot", "physical": [-45, 45]}
+          ]
+        },
+        {
+          "name": "Framing rotation",
+          "offsets": [28],
+          "geometry": "Beam",
+          "default": 128,
+          "functions": [
+            {"name": "-45 to +45 degrees", "attribute": "ShaperRot", "physical": [-45, 45]}
+          ]
+        },
+        {
+          "name": "Control",
+          "offsets": [29],
+          "default": 0,
+          "functions": [
+            {"name": "Normal", "attribute": "NoFeature", "dmx": [0, 199]},
+            {"name": "Reset", "attribute": "Control", "dmx": [200, 255]}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Basic",
+      "description": "18 DMX channels, 8-bit pan/tilt, no framing",
+      "footprint": 18,
+      "channels": [
+        {
+          "name": "Pan",
+          "offsets": [1],
+          "geometry": "Yoke",
+          "default": 128,
+          "functions": [
+            {"name": "Pan 540 degrees", "attribute": "Pan", "physical": [-270, 270]}
+          ]
+        },
+        {
+          "name": "Tilt",
+          "offsets": [2],
+          "geometry": "Head",
+          "default": 128,
+          "functions": [
+            {"name": "Tilt 270 degrees", "attribute": "Tilt", "physical": [-135, 135]}
+          ]
+        },
+        {
+          "name": "Shutter / Strobe",
+          "offsets": [3],
+          "geometry": "Beam",
+          "default": 32,
+          "functions": [
+            {"name": "Closed", "attribute": "Shutter1", "kind": "shutterClosed", "dmx": [0, 31]},
+            {"name": "Open", "attribute": "Shutter1", "kind": "shutterOpen", "dmx": [32, 63]},
+            {"name": "Strobe slow to fast", "attribute": "Shutter1Strobe", "dmx": [64, 95], "physical": [1, 20]},
+            {"name": "Open", "attribute": "Shutter1", "kind": "shutterOpen", "dmx": [96, 127]},
+            {"name": "Pulse slow to fast", "attribute": "Shutter1StrobePulse", "dmx": [128, 159], "physical": [1, 10]},
+            {"name": "Open", "attribute": "Shutter1", "kind": "shutterOpen", "dmx": [160, 191]},
+            {"name": "Random strobe", "attribute": "Shutter1StrobeRandom", "dmx": [192, 223], "physical": [1, 20]},
+            {"name": "Open", "attribute": "Shutter1", "kind": "shutterOpen", "dmx": [224, 255]}
+          ]
+        },
+        {
+          "name": "Dimmer",
+          "offsets": [4],
+          "geometry": "Beam",
+          "default": 0,
+          "highlight": 255,
+          "functions": [
+            {"attribute": "Dimmer", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Cyan",
+          "offsets": [5],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Cyan 0-100%", "attribute": "ColorSub_C", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Magenta",
+          "offsets": [6],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Magenta 0-100%", "attribute": "ColorSub_M", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Yellow",
+          "offsets": [7],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Yellow 0-100%", "attribute": "ColorSub_Y", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Color wheel",
+          "offsets": [8],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Open", "attribute": "Color1", "dmx": [0, 13], "wheel": "Color wheel", "slot": 1},
+            {"name": "Red", "attribute": "Color1", "dmx": [14, 27], "wheel": "Color wheel", "slot": 2},
+            {"name": "Orange", "attribute": "Color1", "dmx": [28, 41], "wheel": "Color wheel", "slot": 3},
+            {"name": "Yellow", "attribute": "Color1", "dmx": [42, 55], "wheel": "Color wheel", "slot": 4},
+            {"name": "Green", "attribute": "Color1", "dmx": [56, 70], "wheel": "Color wheel", "slot": 5},
+            {"name": "Cyan", "attribute": "Color1", "dmx": [71, 84], "wheel": "Color wheel", "slot": 6},
+            {"name": "Blue", "attribute": "Color1", "dmx": [85, 98], "wheel": "Color wheel", "slot": 7},
+            {"name": "Magenta", "attribute": "Color1", "dmx": [99, 112], "wheel": "Color wheel", "slot": 8},
+            {"name": "CTO", "attribute": "Color1", "dmx": [113, 127], "wheel": "Color wheel", "slot": 9},
+            {
+              "name": "Rainbow forward",
+              "attribute": "Color1WheelSpin",
+              "dmx": [128, 191],
+              "physical": [10, 360],
+              "wheel": "Color wheel"
+            },
+            {
+              "name": "Rainbow reverse",
+              "attribute": "Color1WheelSpin",
+              "dmx": [192, 255],
+              "physical": [-10, -360],
+              "wheel": "Color wheel"
+            }
+          ]
+        },
+        {
+          "name": "Gobo wheel 1",
+          "offsets": [9],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Open", "attribute": "Gobo1", "dmx": [0, 9], "wheel": "Gobo wheel 1", "slot": 1},
+            {"name": "Dots", "attribute": "Gobo1", "dmx": [10, 19], "wheel": "Gobo wheel 1", "slot": 2},
+            {"name": "Star", "attribute": "Gobo1", "dmx": [20, 29], "wheel": "Gobo wheel 1", "slot": 3},
+            {"name": "Breakup", "attribute": "Gobo1", "dmx": [30, 39], "wheel": "Gobo wheel 1", "slot": 4},
+            {"name": "Lines", "attribute": "Gobo1", "dmx": [40, 49], "wheel": "Gobo wheel 1", "slot": 5},
+            {"name": "Tunnel", "attribute": "Gobo1", "dmx": [50, 59], "wheel": "Gobo wheel 1", "slot": 6},
+            {
+              "name": "Wheel spin forward",
+              "attribute": "Gobo1WheelSpin",
+              "dmx": [60, 157],
+              "physical": [5, 180],
+              "wheel": "Gobo wheel 1"
+            },
+            {
+              "name": "Wheel spin reverse",
+              "attribute": "Gobo1WheelSpin",
+              "dmx": [158, 255],
+              "physical": [-5, -180],
+              "wheel": "Gobo wheel 1"
+            }
+          ]
+        },
+        {
+          "name": "Gobo 1 rotation",
+          "offsets": [10],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Index 0-360 degrees", "attribute": "Gobo1Pos", "dmx": [0, 127], "physical": [0, 360]},
+            {"name": "Spin forward", "attribute": "Gobo1PosRotate", "dmx": [128, 191], "physical": [0, 180]},
+            {"name": "Spin reverse", "attribute": "Gobo1PosRotate", "dmx": [192, 255], "physical": [0, -180]}
+          ]
+        },
+        {
+          "name": "Gobo wheel 2",
+          "offsets": [11],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Open", "attribute": "Gobo2", "dmx": [0, 9], "wheel": "Gobo wheel 2", "slot": 1},
+            {"name": "Flower", "attribute": "Gobo2", "dmx": [10, 19], "wheel": "Gobo wheel 2", "slot": 2},
+            {"name": "Triangle", "attribute": "Gobo2", "dmx": [20, 29], "wheel": "Gobo wheel 2", "slot": 3},
+            {"name": "Spiral", "attribute": "Gobo2", "dmx": [30, 39], "wheel": "Gobo wheel 2", "slot": 4},
+            {
+              "name": "Wheel spin forward",
+              "attribute": "Gobo2WheelSpin",
+              "dmx": [40, 147],
+              "physical": [5, 180],
+              "wheel": "Gobo wheel 2"
+            },
+            {
+              "name": "Wheel spin reverse",
+              "attribute": "Gobo2WheelSpin",
+              "dmx": [148, 255],
+              "physical": [-5, -180],
+              "wheel": "Gobo wheel 2"
+            }
+          ]
+        },
+        {
+          "name": "Prism",
+          "offsets": [12],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Out", "attribute": "Prism1", "dmx": [0, 127], "wheel": "Prism wheel", "slot": 1},
+            {"name": "3-facet in", "attribute": "Prism1", "dmx": [128, 255], "wheel": "Prism wheel", "slot": 2}
+          ]
+        },
+        {
+          "name": "Prism rotation",
+          "offsets": [13],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Index 0-360 degrees", "attribute": "Prism1Pos", "dmx": [0, 127], "physical": [0, 360]},
+            {"name": "Spin forward", "attribute": "Prism1PosRotate", "dmx": [128, 191], "physical": [0, 180]},
+            {"name": "Spin reverse", "attribute": "Prism1PosRotate", "dmx": [192, 255], "physical": [0, -180]}
+          ]
+        },
+        {
+          "name": "Iris",
+          "offsets": [14],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Open to closed", "attribute": "Iris", "physical": [1, 0.05]}
+          ]
+        },
+        {
+          "name": "Frost",
+          "offsets": [15],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Frost 0-100%", "attribute": "Frost1", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Focus",
+          "offsets": [16],
+          "geometry": "Beam",
+          "default": 255,
+          "functions": [
+            {"name": "Blurred to sharp", "attribute": "Focus1", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Zoom",
+          "offsets": [17],
+          "geometry": "Beam",
+          "default": 128,
+          "functions": [
+            {"name": "Zoom 8-42 degrees", "attribute": "Zoom", "physical": [8, 42]}
+          ]
+        },
+        {
+          "name": "Control",
+          "offsets": [18],
+          "default": 0,
+          "functions": [
+            {"name": "Normal", "attribute": "NoFeature", "dmx": [0, 199]},
+            {"name": "Reset", "attribute": "Control", "dmx": [200, 255]}
+          ]
+        }
+      ]
+    }
+  ],
+  "resources": [
+    {"name": "dots", "format": "svg", "file": "../../gobos/dots.svg"},
+    {"name": "star", "format": "svg", "file": "../../gobos/star.svg"},
+    {"name": "breakup", "format": "svg", "file": "../../gobos/breakup.svg"},
+    {"name": "lines", "format": "svg", "file": "../../gobos/lines.svg"},
+    {"name": "tunnel", "format": "svg", "file": "../../gobos/tunnel.svg"},
+    {"name": "flower", "format": "svg", "file": "../../gobos/flower.svg"},
+    {"name": "triangle", "format": "svg", "file": "../../gobos/triangle.svg"},
+    {"name": "spiral", "format": "svg", "file": "../../gobos/spiral.svg"}
+  ]
+}
