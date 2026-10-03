@@ -93,7 +93,7 @@ std::vector<std::uint8_t> ZipWriter::finish() const {
     std::memset(&zip, 0, sizeof(zip));
     if (!mz_zip_writer_init_heap(&zip, 0, 0)) return {};
     for (const auto& [name, data] : files_) {
-        if (!mz_zip_writer_add_mem(&zip, name.c_str(), data.data(), data.size(), MZ_DEFAULT_COMPRESSION)) {
+        if (!mz_zip_writer_add_mem(&zip, name.c_str(), data.data(), data.size(), static_cast<mz_uint>(MZ_DEFAULT_LEVEL))) {
             mz_zip_writer_end(&zip);
             return {};
         }
