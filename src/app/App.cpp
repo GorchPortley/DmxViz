@@ -20,6 +20,7 @@
 #include "stage/ProjectFile.h"
 #include "ui/DockLayout.h"
 #include "ui/DmxInterfacesPanel.h"
+#include "ui/DmxMonitorPanel.h"
 #include "ui/FixtureLibraryPanel.h"
 #include "ui/PatchPanel.h"
 #include "ui/LogPanel.h"
@@ -201,9 +202,9 @@ void App::createPanels() {
     // Placeholders: replace each by its real panel (same title) when it exists.
     panels_.push_back(std::make_unique<ui::PlaceholderPanel>(ui::kOutlinerTitle));
     panels_.push_back(std::make_unique<ui::PlaceholderPanel>(ui::kInspectorTitle));
-    panels_.push_back(std::make_unique<ui::PlaceholderPanel>(ui::kDmxMonitorTitle));
     panels_.push_back(std::make_unique<ui::FixtureLibraryPanel>());
     panels_.push_back(std::make_unique<ui::PatchPanel>());
+    panels_.push_back(std::make_unique<ui::DmxMonitorPanel>());
     panels_.push_back(std::make_unique<ui::DmxInterfacesPanel>());
     panels_.push_back(std::make_unique<ui::LogPanel>());
 }
