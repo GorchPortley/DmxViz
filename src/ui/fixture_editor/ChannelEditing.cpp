@@ -370,6 +370,54 @@ bool renameWheel(fixtures::FixtureType& type, std::size_t wheelIndex, const std:
 }
 
 // ---------------------------------------------------------------------------
+// Emitters and categories
+
+std::size_t addEmitter(fixtures::FixtureType& type) {
+    std::vector<std::string> names;
+    for (const fixtures::Emitter& e : type.emitters) names.push_back(e.name);
+    fixtures::Emitter emitter;
+    emitter.name = uniqueName("Emitter", names);
+    type.emitters.push_back(std::move(emitter));
+    return type.emitters.size() - 1;
+}
+
+bool renameEmitter(fixtures::FixtureType& type, std::size_t emitterIndex, const std::string& newName) {
+    if (emitterIndex >= type.emitters.size() || newName.empty()) return false;
+    const std::string oldName = type.emitters[emitterIndex].name;
+    if (oldName == newName) return true;
+    for (const fixtures::Emitter& e : type.emitters)
+        if (e.name == newName) return false;
+    type.emitters[emitterIndex].name = newName;
+    for (DmxMode& mode : type.modes)
+        for (Channel& channel : mode.channels)
+            for (ChannelFunction& f : channel.functions)
+                if (f.emitter == oldName) f.emitter = newName;
+    return true;
+}
+
+std::string joinCategories(const std::vector<std::string>& categories) {
+    std::string text;
+    for (const std::string& category : categories) {
+        if (!text.empty()) text += ", ";
+        text += category;
+    }
+    return text;
+}
+
+std::vector<std::string> splitCategories(std::string_view text) {
+    std::vector<std::string> categories;
+    while (!text.empty()) {
+        const std::size_t comma = text.find(',');
+        std::string_view part = text.substr(0, comma);
+        text = comma == std::string_view::npos ? std::string_view() : text.substr(comma + 1);
+        while (!part.empty() && std::isspace(static_cast<unsigned char>(part.front()))) part.remove_prefix(1);
+        while (!part.empty() && std::isspace(static_cast<unsigned char>(part.back()))) part.remove_suffix(1);
+        if (!part.empty()) categories.emplace_back(part);
+    }
+    return categories;
+}
+
+// ---------------------------------------------------------------------------
 // Resources
 
 std::optional<ImportedFile> readImageFile(const std::filesystem::path& file, std::string* error) {

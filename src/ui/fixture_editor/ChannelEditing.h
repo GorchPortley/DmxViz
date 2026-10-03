@@ -90,6 +90,17 @@ fixtures::WheelSlot makeSlot(fixtures::SlotKind kind, int slotNumber);
 // Renames a wheel and the channel functions that use it. False when the name is empty or taken.
 bool renameWheel(fixtures::FixtureType& type, std::size_t wheelIndex, const std::string& newName);
 
+// ---- emitters and categories ------------------------------------------------------------------
+
+// Adds an emitter named "Emitter", "Emitter 2"... (white, no wavelength). Returns its index.
+std::size_t addEmitter(fixtures::FixtureType& type);
+// Renames an emitter and the channel functions that name it. False when the name is empty or taken.
+bool renameEmitter(fixtures::FixtureType& type, std::size_t emitterIndex, const std::string& newName);
+
+// "Moving Head, Color Changer" <-> {"Moving Head", "Color Changer"}. Splitting trims blanks and drops empties.
+std::string joinCategories(const std::vector<std::string>& categories);
+std::vector<std::string> splitCategories(std::string_view text);
+
 // ---- resources --------------------------------------------------------------------------------
 
 // A picked file, ready to become a fixture resource.

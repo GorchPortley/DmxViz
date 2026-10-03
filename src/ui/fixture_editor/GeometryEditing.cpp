@@ -146,6 +146,25 @@ bool renameNode(fixtures::FixtureType& type, const NodePath& path, const std::st
     return true;
 }
 
+std::size_t addGroup(fixtures::FixtureType& type) {
+    fixtures::GeometryGroup group;
+    group.name = uniqueGeometryName(type, "Group");
+    type.geometryGroups.push_back(std::move(group));
+    return type.geometryGroups.size() - 1;
+}
+
+bool renameGroup(fixtures::FixtureType& type, std::size_t groupIndex, const std::string& newName) {
+    if (groupIndex >= type.geometryGroups.size() || newName.empty()) return false;
+    const std::string oldName = type.geometryGroups[groupIndex].name;
+    if (oldName == newName) return true;
+    if (usedNames(type).contains(newName)) return false;
+    type.geometryGroups[groupIndex].name = newName;
+    for (fixtures::DmxMode& mode : type.modes)
+        for (fixtures::Channel& channel : mode.channels)
+            if (channel.geometry == oldName) channel.geometry = newName;
+    return true;
+}
+
 std::vector<std::string> makeCells(fixtures::FixtureType& type, const NodePath& parent, const CellOptions& options) {
     std::vector<std::string> names;
     Geometry* parentNode = nodeAt(type.geometry, parent);

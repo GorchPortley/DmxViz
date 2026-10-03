@@ -6,8 +6,8 @@
 // is (mode / channel / function / wheel / geometry), so the list can jump to it.
 //
 // Rules (E = error, W = warning):
-//   General   E name or id empty, id with odd characters, id used by another library type;
-//             W no dimensions / movement speed missing for a fixture with axes
+//   General   E name or id empty, id with odd characters, id used by another library type,
+//             empty or duplicate emitter names; W movement speed of zero for a fixture with axes
 //   Geometry  E empty or duplicate names, missing mesh resource, field angle < beam angle,
 //             beam without a positive lens radius; W no Beam node, axis nobody drives
 //   Wheels    E empty or duplicate wheel names, wheel without slots, slot image missing,
@@ -17,8 +17,9 @@
 //             channels: E duplicate names, bad or overlapping offsets, default above the
 //             channel maximum, unknown geometry or group; W no functions;
 //             functions: E range outside the channel resolution or reversed, unknown wheel,
-//             emitter or mode master; W gaps between functions, overlapping functions of the
-//             same attribute, slot range outside the wheel, pan/tilt on a geometry without axis
+//             emitter or mode master, reversed mode master range; W invalid set ranges, gaps
+//             between functions, overlapping functions of the same attribute, slot range outside
+//             the wheel, pan/tilt on a geometry without axis
 //
 // No ImGui and no EditorContext in here: the rules are covered by unit tests.
 

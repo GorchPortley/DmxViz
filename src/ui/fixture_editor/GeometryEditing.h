@@ -36,6 +36,13 @@ bool moveNode(fixtures::FixtureType& type, NodePath& path, int delta);
 // False when the name is empty or already used.
 bool renameNode(fixtures::FixtureType& type, const NodePath& path, const std::string& newName);
 
+// Geometry groups (a channel may control a group of nodes, e.g. all pixels of a bar).
+// Adds an empty group with a unique name and returns its index.
+std::size_t addGroup(fixtures::FixtureType& type);
+// Renames a group and the channels that control it. False when the name is empty or already used by a
+// node or another group.
+bool renameGroup(fixtures::FixtureType& type, std::size_t groupIndex, const std::string& newName);
+
 // "Make cells": a row of beam cells (pixel bars, strobe blinders).
 struct CellOptions {
     int count = 8;

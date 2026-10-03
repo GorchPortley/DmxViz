@@ -106,6 +106,16 @@ void FixtureValidator::checkGeneral() {
             add(Severity::Error, place, std::format("The id \"{}\" is already used by another fixture in the library.", type_.id));
     }
 
+    for (std::size_t i = 0; i < type_.emitters.size(); ++i) {
+        const std::string& name = type_.emitters[i].name;
+        if (name.empty()) add(Severity::Error, place, std::format("Emitter {} has no name.", i + 1));
+        for (std::size_t other = 0; other < i; ++other)
+            if (!name.empty() && type_.emitters[other].name == name) {
+                add(Severity::Error, place, std::format("Two emitters are named \"{}\".", name));
+                break;
+            }
+    }
+
     const fixtures::PhysicalSpec& physical = type_.physical;
     if (physical.weight < 0.0f || physical.power < 0.0f)
         add(Severity::Error, place, "Weight and power must not be negative.");
@@ -363,6 +373,12 @@ void FixtureValidator::checkFunctions(std::size_t modeIndex, std::size_t channel
             add(Severity::Error, place, std::format("The emitter \"{}\" does not exist.", f.emitter));
         if (!f.modeMaster.empty() && mode.findChannel(f.modeMaster) == nullptr)
             add(Severity::Error, place, std::format("The mode master channel \"{}\" does not exist.", f.modeMaster));
+        if (!f.modeMaster.empty() && f.modeFrom > f.modeTo)
+            add(Severity::Error, place, std::format("The mode master range {}..{} is reversed.", f.modeFrom, f.modeTo));
+        for (const fixtures::ChannelSet& set : f.sets) {
+            if (set.dmxFrom > set.dmxTo || set.dmxTo > max)
+                add(Severity::Warning, place, std::format("The set \"{}\" has an invalid DMX range {}..{}.", set.name, set.dmxFrom, set.dmxTo));
+        }
     }
 
     checkFunctionRanges(channelPlace, channel);

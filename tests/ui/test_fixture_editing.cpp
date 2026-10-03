@@ -412,3 +412,70 @@ TEST_CASE("edit document: new fixtures get a unique id that follows the name") {
     CHECK(makeUniqueId("a/b", taken) == "a/b");
     CHECK(makeUniqueId("custom/moving-head", taken) == "custom/moving-head-2");
 }
+
+// ---------------------------------------------------------------------------
+// Emitters, categories and groups
+
+TEST_CASE("fixture editing: emitters keep their references when renamed") {
+    fixtures::FixtureType type = makeTemplateFixture(FixtureTemplate::LedPar);
+    const std::size_t first = addEmitter(type);
+    const std::size_t second = addEmitter(type);
+    CHECK(type.emitters[first].name == "Emitter");
+    CHECK(type.emitters[second].name == "Emitter 2");
+    type.modes.front().channels[1].functions.front().emitter = "Emitter";  // the red channel
+
+    CHECK_FALSE(renameEmitter(type, first, "Emitter 2"));
+    CHECK_FALSE(renameEmitter(type, first, ""));
+    CHECK(renameEmitter(type, first, "Deep red"));
+    CHECK(type.modes.front().channels[1].functions.front().emitter == "Deep red");
+    CHECK(validateFixture(type).empty());
+
+    type.emitters[second].name = "Deep red";
+    const std::vector<Problem> problems = validateFixture(type);
+    CHECK(countProblems(problems).errors == 1);
+}
+
+TEST_CASE("fixture editing: categories as text") {
+    CHECK(joinCategories({"Moving Head", "Color Changer"}) == "Moving Head, Color Changer");
+    CHECK(joinCategories({}).empty());
+    const std::vector<std::string> parsed = splitCategories("  Moving Head ,, Color Changer,");
+    REQUIRE(parsed.size() == 2);
+    CHECK(parsed[0] == "Moving Head");
+    CHECK(parsed[1] == "Color Changer");
+    CHECK(splitCategories("   ").empty());
+}
+
+TEST_CASE("geometry editing: groups keep their references when renamed") {
+    fixtures::FixtureType type = makeTemplateFixture(FixtureTemplate::LedPar);
+    const std::size_t group = addGroup(type);
+    CHECK(type.geometryGroups[group].name == "Group");
+    CHECK(addGroup(type) == group + 1);
+    CHECK(type.geometryGroups.back().name == "Group 2");
+    type.geometryGroups[group].members = {"Beam"};
+    type.modes.front().channels.front().geometry = "Group";
+
+    CHECK_FALSE(renameGroup(type, group, "Beam"));     // a node has this name
+    CHECK_FALSE(renameGroup(type, group, "Group 2"));  // another group has it
+    CHECK(renameGroup(type, group, "All beams"));
+    CHECK(type.modes.front().channels.front().geometry == "All beams");
+    CHECK(validateFixture(type).empty());
+}
+
+TEST_CASE("fixture validation: mode master ranges and sets") {
+    fixtures::FixtureType type = makeTemplateFixture(FixtureTemplate::LedPar);
+    fixtures::ChannelFunction& f = type.modes.front().channels.front().functions.front();
+    f.modeMaster = "Red";
+    f.modeFrom = 50;
+    f.modeTo = 10;
+    f.sets.push_back({"Bad", 300, 100});
+
+    const std::vector<Problem> problems = validateFixture(type);
+    bool reversed = false;
+    bool badSet = false;
+    for (const Problem& p : problems) {
+        reversed |= p.message.find("mode master range") != std::string::npos && p.severity == Severity::Error;
+        badSet |= p.message.find("set \"Bad\"") != std::string::npos && p.severity == Severity::Warning;
+    }
+    CHECK(reversed);
+    CHECK(badSet);
+}

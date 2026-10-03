@@ -135,14 +135,14 @@ bool WheelsSection::drawWheel(fixtures::FixtureType& type, std::size_t wheelInde
     ImGui::SetItemTooltip("Channel functions refer to the wheel by name; renaming updates them.");
 
     const ImGuiTableFlags tableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit |
-                                       ImGuiTableFlags_ScrollY;
+                                       ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
     const float footer = ImGui::GetFrameHeightWithSpacing() * 2.0f;
     if (ImGui::BeginTable("##slots", 5, tableFlags, ImVec2(0.0f, -footer))) {
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, 24.0f);
-        ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 100.0f);
-        ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 130.0f);
-        ImGui::TableSetupColumn("Content", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 96.0f);
+        ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 120.0f);
+        ImGui::TableSetupColumn("Content", ImGuiTableColumnFlags_WidthFixed, 230.0f);
         ImGui::TableSetupColumn("##actions", ImGuiTableColumnFlags_WidthFixed, 100.0f);
         ImGui::TableHeadersRow();
         for (std::size_t s = 0; s < wheel.slots.size(); ++s) {
@@ -233,7 +233,7 @@ bool WheelsSection::drawImageSlot(fixtures::FixtureType& type, WheelSlot& slot, 
     ImGui::SameLine();
     ImGui::BeginGroup();
 
-    ImGui::SetNextItemWidth(150.0f);
+    ImGui::SetNextItemWidth(std::max(90.0f, ImGui::GetContentRegionAvail().x));
     if (ImGui::BeginCombo("##image", slot.image.empty() ? "(no image)" : slot.image.c_str())) {
         if (ImGui::Selectable("(no image)", slot.image.empty())) {
             slot.image.clear();
@@ -249,7 +249,7 @@ bool WheelsSection::drawImageSlot(fixtures::FixtureType& type, WheelSlot& slot, 
         ImGui::EndCombo();
     }
     ImGui::BeginDisabled(!FileDialogs::available() || dialogs_.busy());
-    if (ImGui::SmallButton("Import image...")) {
+    if (ImGui::SmallButton("Import...")) {
         importWheel_ = selectedWheel_;
         importSlot_ = static_cast<int>(slotIndex);
         dialogs_.requestOpen("Import gobo image", lastImportDir_, {"Images (PNG, JPG, SVG)", "*.png *.jpg *.jpeg *.svg", "All files", "*"});
