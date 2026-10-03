@@ -80,7 +80,7 @@ private:
     std::unordered_map<NodeId, FixtureEntry> entries_;  // node-based: entry addresses stay valid
     std::vector<FixtureEntry*> order_;                  // scene order, rebuilt by syncFixtures()
     std::map<const fixtures::FixtureType*, std::unique_ptr<fixtures::FixtureAssets>> typeAssets_;
-    std::unordered_set<std::string> reported_;          // problems already logged
+    std::unordered_set<std::string> reported_;  // problems already logged
     std::uint64_t syncStamp_ = 0;
 
     // Change detection for the caches.

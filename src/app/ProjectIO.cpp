@@ -15,7 +15,9 @@ namespace {
 
 using nlohmann::json;
 
-json vec3ToJson(const glm::vec3& v) { return json::array({v.x, v.y, v.z}); }
+json vec3ToJson(const glm::vec3& v) {
+    return json::array({v.x, v.y, v.z});
+}
 
 glm::vec3 vec3FromJson(const json& j, const glm::vec3& fallback) {
     if (!j.is_array() || j.size() != 3) return fallback;
@@ -58,8 +60,8 @@ render::Environment environmentFromJson(const json& j) {
 bool isInside(const std::filesystem::path& file, const std::filesystem::path& dir) {
     if (dir.empty()) return false;
     std::error_code ec;
-    const std::filesystem::path relative = std::filesystem::weakly_canonical(file, ec).lexically_relative(
-        std::filesystem::weakly_canonical(dir, ec));
+    const std::filesystem::path relative =
+        std::filesystem::weakly_canonical(file, ec).lexically_relative(std::filesystem::weakly_canonical(dir, ec));
     return !ec && !relative.empty() && *relative.begin() != "..";
 }
 

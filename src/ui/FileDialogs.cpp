@@ -36,12 +36,18 @@ struct FileDialogs::Impl {
     std::unique_ptr<pfd::save_file> save;
 };
 
-FileDialogs::FileDialogs() : impl_(std::make_unique<Impl>()) { pfd::settings::verbose(false); }
+FileDialogs::FileDialogs() : impl_(std::make_unique<Impl>()) {
+    pfd::settings::verbose(false);
+}
 FileDialogs::~FileDialogs() = default;
 
-bool FileDialogs::available() { return pfd::settings::available(); }
+bool FileDialogs::available() {
+    return pfd::settings::available();
+}
 
-bool FileDialogs::busy() const { return impl_->open != nullptr || impl_->save != nullptr; }
+bool FileDialogs::busy() const {
+    return impl_->open != nullptr || impl_->save != nullptr;
+}
 
 bool FileDialogs::requestOpen(const std::string& title, const std::filesystem::path& startPath,
                               const std::vector<std::string>& filters) {

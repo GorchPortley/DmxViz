@@ -30,9 +30,12 @@ bool anyCameraButtonDown(const ImGuiIO& io) {
 
 const char* toolName(ViewportPanel::GizmoTool tool) {
     switch (tool) {
-        case ViewportPanel::GizmoTool::Translate: return "Move";
-        case ViewportPanel::GizmoTool::Rotate: return "Rotate";
-        case ViewportPanel::GizmoTool::Scale: return "Scale";
+        case ViewportPanel::GizmoTool::Translate:
+            return "Move";
+        case ViewportPanel::GizmoTool::Rotate:
+            return "Rotate";
+        case ViewportPanel::GizmoTool::Scale:
+            return "Scale";
     }
     return "Transform";
 }
@@ -50,9 +53,13 @@ bool toggleButton(const char* label, bool active, const char* tooltip) {
 
 ViewportPanel::ViewportPanel() = default;
 
-const char* ViewportPanel::title() const { return kViewportTitle; }
+const char* ViewportPanel::title() const {
+    return kViewportTitle;
+}
 
-int ViewportPanel::windowFlags() const { return ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse; }
+int ViewportPanel::windowFlags() const {
+    return ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+}
 
 // ---------------------------------------------------------------------------
 // Frame
@@ -76,8 +83,10 @@ void ViewportPanel::draw(EditorContext& ctx) {
     drawToolbar(ctx, rect);
     drawStats(ctx, rect);
 
-    const bool hovered = ImGui::IsWindowHovered() && ImGui::IsMouseHoveringRect(rect.min, ImVec2(rect.min.x + rect.size.x, rect.min.y + rect.size.y)) &&
-                         !ImGui::IsAnyItemHovered();
+    const bool hovered =
+        ImGui::IsWindowHovered() &&
+        ImGui::IsMouseHoveringRect(rect.min, ImVec2(rect.min.x + rect.size.x, rect.min.y + rect.size.y)) &&
+        !ImGui::IsAnyItemHovered();
 
     // 3. Camera first: while it is being dragged, gizmo and selection stay out of the way.
     const bool cameraUsed = handleViewportCameraInput(camera_, hovered, rect.size.y, io.DeltaTime);
@@ -106,7 +115,8 @@ void ViewportPanel::drawToolbar(EditorContext& ctx, const ViewRect& rect) {
     if (ImGui::Button(localSpace_ ? "Local" : "World")) localSpace_ = !localSpace_;
     ImGui::SetItemTooltip("Gizmo space: local or world axes (scale is always local)");
     ImGui::SameLine();
-    if (toggleButton("Snap", snapEnabled_, "Snap moves to the grid and rotations to angle steps")) snapEnabled_ = !snapEnabled_;
+    if (toggleButton("Snap", snapEnabled_, "Snap moves to the grid and rotations to angle steps"))
+        snapEnabled_ = !snapEnabled_;
     if (snapEnabled_) {
         ImGui::SameLine();
         ImGui::SetNextItemWidth(64.0f);
@@ -146,7 +156,8 @@ void ViewportPanel::drawStats(EditorContext& ctx, const ViewRect& rect) const {
     std::snprintf(text, sizeof text, "%.0f fps   %d meshes   %d beams   %d draw calls", ImGui::GetIO().Framerate,
                   s.meshInstances, s.beams, s.drawCalls);
     ImDrawList* list = ImGui::GetWindowDrawList();
-    const ImVec2 at(rect.min.x + kToolbarMargin, rect.min.y + rect.size.y - ImGui::GetTextLineHeight() - kToolbarMargin);
+    const ImVec2 at(rect.min.x + kToolbarMargin,
+                    rect.min.y + rect.size.y - ImGui::GetTextLineHeight() - kToolbarMargin);
     list->AddText(ImVec2(at.x + 1.0f, at.y + 1.0f), IM_COL32(0, 0, 0, 200), text);
     list->AddText(at, IM_COL32(200, 200, 205, 220), text);
 }
@@ -239,7 +250,9 @@ NodeId ViewportPanel::pickAt(EditorContext& ctx, const ViewRect& rect, float asp
     const glm::vec2 ndc((mouse.x - rect.min.x) / rect.size.x * 2.0f - 1.0f,
                         1.0f - (mouse.y - rect.min.y) / rect.size.y * 2.0f);
     const Ray ray = camera_.rayThrough(ndc, aspect);
-    const auto skipLocked = [&ctx](const MeshInstance& instance) { return !ctx.scene.effectiveLocked(instance.pickId); };
+    const auto skipLocked = [&ctx](const MeshInstance& instance) {
+        return !ctx.scene.effectiveLocked(instance.pickId);
+    };
     const std::optional<stage::PickHit> hit = picker_.pick(ray, ctx.frame.meshes, ctx.assets, skipLocked);
     return hit ? hit->node : kInvalidNode;
 }
@@ -254,7 +267,8 @@ void ViewportPanel::handleSelection(EditorContext& ctx, const ViewRect& rect, fl
         pressActive_ = true;
         pressPos_ = io.MousePos;
     }
-    if (!ImGui::IsMouseDown(ImGuiMouseButton_Left) && !ImGui::IsMouseReleased(ImGuiMouseButton_Left)) pressActive_ = false;
+    if (!ImGui::IsMouseDown(ImGuiMouseButton_Left) && !ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+        pressActive_ = false;
 
     if (pressActive_ && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
         pressActive_ = false;

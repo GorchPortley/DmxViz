@@ -42,10 +42,11 @@ struct AppOptions {
     int exitAfterFrames = 0;                              // 0 = run until closed
     int width = 1600;
     int height = 900;
-    std::optional<std::filesystem::path> openFile;        // project to load at startup (default: demo show)
-    std::optional<std::filesystem::path> saveProjectPath;  // write the startup show to this file (demo shows, smoke tests)
-    bool testPattern = false;                             // drive all patched fixtures on (see DemoShow.h)
-    std::filesystem::path executablePath;                 // argv[0]
+    std::optional<std::filesystem::path> openFile;  // project to load at startup (default: demo show)
+    std::optional<std::filesystem::path>
+        saveProjectPath;                   // write the startup show to this file (demo shows, smoke tests)
+    bool testPattern = false;              // drive all patched fixtures on (see DemoShow.h)
+    std::filesystem::path executablePath;  // argv[0]
 };
 
 AppOptions parseCommandLine(int argc, char** argv);
@@ -82,7 +83,7 @@ private:
     void newProject();
     bool openProject(const std::filesystem::path& file);
     void requestOpenDialog();
-    void saveProject();       // Save As when the project has no file yet
+    void saveProject();  // Save As when the project has no file yet
     void requestSaveAsDialog();
     bool saveToFile(const std::filesystem::path& file);
     void undo();

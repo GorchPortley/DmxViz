@@ -128,7 +128,8 @@ const fixtures::FixtureAssets* Simulation::assetsFor(const fixtures::FixtureType
     auto it = typeAssets_.find(&type);
     if (it == typeAssets_.end()) {
         std::vector<std::string> warnings;
-        auto realized = std::make_unique<fixtures::FixtureAssets>(fixtures::FixtureAssets::realize(type, assets_, &warnings));
+        auto realized =
+            std::make_unique<fixtures::FixtureAssets>(fixtures::FixtureAssets::realize(type, assets_, &warnings));
         for (const std::string& w : warnings) log::warn("sim", "{}: {}", type.id, w);
         it = typeAssets_.emplace(&type, std::move(realized)).first;
     }
@@ -137,7 +138,8 @@ const fixtures::FixtureAssets* Simulation::assetsFor(const fixtures::FixtureType
 
 void Simulation::fillFootprint(FixtureEntry& entry, const stage::DmxPatch& patch, const dmx::DmxSnapshot& dmx) const {
     const dmx::UniverseData* universe = nullptr;
-    if (patch.patched() && patch.universe <= 0xFFFFu) universe = dmx.universe(static_cast<dmx::UniverseId>(patch.universe));
+    if (patch.patched() && patch.universe <= 0xFFFFu)
+        universe = dmx.universe(static_cast<dmx::UniverseId>(patch.universe));
     if (universe == nullptr) {
         // Nothing patched or no data yet: park the fixture in its default state.
         entry.footprint = entry.defaults;

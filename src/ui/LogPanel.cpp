@@ -10,17 +10,23 @@ constexpr double kRefreshSeconds = 0.25;
 
 ImVec4 levelColor(log::Level level) {
     switch (level) {
-        case log::Level::Debug: return ImVec4(0.55f, 0.55f, 0.60f, 1.0f);
-        case log::Level::Info: return ImVec4(0.85f, 0.85f, 0.88f, 1.0f);
-        case log::Level::Warn: return ImVec4(1.00f, 0.80f, 0.30f, 1.0f);
-        case log::Level::Error: return ImVec4(1.00f, 0.40f, 0.35f, 1.0f);
+        case log::Level::Debug:
+            return ImVec4(0.55f, 0.55f, 0.60f, 1.0f);
+        case log::Level::Info:
+            return ImVec4(0.85f, 0.85f, 0.88f, 1.0f);
+        case log::Level::Warn:
+            return ImVec4(1.00f, 0.80f, 0.30f, 1.0f);
+        case log::Level::Error:
+            return ImVec4(1.00f, 0.40f, 0.35f, 1.0f);
     }
     return ImVec4(1, 1, 1, 1);
 }
 
 }  // namespace
 
-const char* LogPanel::title() const { return kLogTitle; }
+const char* LogPanel::title() const {
+    return kLogTitle;
+}
 
 void LogPanel::refreshEntries() {
     const double now = ImGui::GetTime();
@@ -50,8 +56,7 @@ void LogPanel::draw(EditorContext& ctx) {
     ImGui::Checkbox("Auto-scroll", &autoScroll_);
 
     ImGui::Separator();
-    ImGui::BeginChild("##logLines", ImVec2(0, 0), ImGuiChildFlags_None,
-                      ImGuiWindowFlags_HorizontalScrollbar);
+    ImGui::BeginChild("##logLines", ImVec2(0, 0), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar);
     for (const log::Entry& e : entries_) {
         if (e.timeSeconds <= clearedBefore_ || e.level < minLevel_) continue;
         if (textFilter_.IsActive() && !textFilter_.PassFilter(e.message.c_str()) &&

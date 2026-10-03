@@ -23,8 +23,8 @@ constexpr const char* kProfileSpotId = "generic/profile-spot";
 constexpr int kSpotsPerTruss = 4;
 constexpr int kExtrasPerType = 4;
 
-constexpr float kDeckHeight = 0.6f;      // top of the stage deck
-constexpr float kTrussHeight = 5.5f;     // centre of the truss
+constexpr float kDeckHeight = 0.6f;   // top of the stage deck
+constexpr float kTrussHeight = 5.5f;  // centre of the truss
 constexpr float kTrussLength = 12.0f;
 constexpr float kUpstageTrussZ = -2.0f;
 constexpr float kDownstageTrussZ = 2.2f;
@@ -104,7 +104,8 @@ void buildDemoShow(stage::Scene& scene, const fixtures::FixtureLibrary& library,
         for (int i = 0; i < kSpotsPerTruss; ++i)
             hangFixture(scene, patcher, *spot, trussSlot(i, kSpotsPerTruss), upstage, kUpstageTrussZ, fixtureNumber);
         for (int i = 0; i < kSpotsPerTruss; ++i)
-            hangFixture(scene, patcher, *spot, trussSlot(i, kSpotsPerTruss), downstage, kDownstageTrussZ, fixtureNumber);
+            hangFixture(scene, patcher, *spot, trussSlot(i, kSpotsPerTruss), downstage, kDownstageTrussZ,
+                        fixtureNumber);
     } else {
         log::warn("app", "demo show: fixture type {} is not in the library, the stage has no spots", kProfileSpotId);
     }
@@ -112,7 +113,8 @@ void buildDemoShow(stage::Scene& scene, const fixtures::FixtureLibrary& library,
     // Every other generic fixture type found in the library goes on a third truss.
     std::vector<const fixtures::FixtureType*> extras;
     for (const fixtures::FixtureType* type : library.all())
-        if (type->id.starts_with("generic/") && type->id != kProfileSpotId && !type->modes.empty()) extras.push_back(type);
+        if (type->id.starts_with("generic/") && type->id != kProfileSpotId && !type->modes.empty())
+            extras.push_back(type);
     if (!extras.empty()) {
         const NodeId mid = addTruss("Mid truss", kMidTrussZ);
         // All extras spread evenly along the truss, grouped by type.
@@ -150,7 +152,8 @@ const glm::vec3 kPalette[] = {
 // Number of slots of the wheel behind a wheel attribute (0 if the mode has no such wheel).
 int wheelSlotCount(const fixtures::AttributeEncoder& encoder, fixtures::Attribute attribute) {
     for (const auto& control : encoder.controls())
-        if (control.attribute == attribute && control.wheel != nullptr) return static_cast<int>(control.wheel->slots.size());
+        if (control.attribute == attribute && control.wheel != nullptr)
+            return static_cast<int>(control.wheel->slots.size());
     return 0;
 }
 
@@ -192,7 +195,7 @@ void applyTestPattern(const stage::Scene& scene, const fixtures::FixtureLibrary&
         // On: full dimmer, open shutter, a colour and a slightly different zoom per fixture.
         encoder.setPhysical(bytes, Attribute::Dimmer, 1.0f);
         encoder.setShutter(bytes, fixtures::FunctionKind::ShutterOpen);
-        encoder.setColor(bytes, kPalette[index % std::size(kPalette)]);
+        encoder.setColor(bytes, kPalette[static_cast<std::size_t>(index) % std::size(kPalette)]);
         encoder.setNormalized(bytes, Attribute::Zoom, 0.25f + 0.15f * static_cast<float>(index % 4));
         encoder.setNormalized(bytes, Attribute::Focus1, 1.0f);
 

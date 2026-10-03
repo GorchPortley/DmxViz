@@ -136,15 +136,15 @@ void App::init() {
     simulation_->setSelection(&selection_);
 
     context_ = std::make_unique<ui::EditorContext>(ui::EditorContext{.scene = scene_,
-                                                                      .commands = commands_,
-                                                                      .selection = selection_,
-                                                                      .fixtures = fixtures_,
-                                                                      .dmx = dmx_,
-                                                                      .dmxSnapshot = snapshot_,
-                                                                      .assets = assets_,
-                                                                      .renderer = renderer_,
-                                                                      .environment = environment_,
-                                                                      .frame = frame_});
+                                                                     .commands = commands_,
+                                                                     .selection = selection_,
+                                                                     .fixtures = fixtures_,
+                                                                     .dmx = dmx_,
+                                                                     .dmxSnapshot = snapshot_,
+                                                                     .assets = assets_,
+                                                                     .renderer = renderer_,
+                                                                     .environment = environment_,
+                                                                     .frame = frame_});
     createPanels();
     loadStartupShow();
 }
@@ -282,7 +282,9 @@ void App::event(const sapp_event* ev) {
     }
     if (ev->type == SAPP_EVENTTYPE_FILES_DROPPED && context_) {
         for (int i = 0; i < sapp_get_num_dropped_files(); ++i) {
-            const std::filesystem::path file = std::filesystem::path(sapp_get_dropped_file_path(i));
+            // sokol hands out UTF-8 paths on every platform.
+            const std::string utf8 = sapp_get_dropped_file_path(i);
+            const std::filesystem::path file(std::u8string(utf8.begin(), utf8.end()));
             if (file.extension() == stage::kProjectExtension) {
                 whenSafeToDiscard([this, file] { openProject(file); });
             } else {
