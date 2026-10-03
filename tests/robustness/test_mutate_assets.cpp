@@ -72,7 +72,7 @@ Bytes pngHeaderOnly(std::uint32_t width, std::uint32_t height) {
     Bytes b{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, 'I', 'H', 'D', 'R'};
     for (std::uint32_t v : {width, height})
         for (int shift = 24; shift >= 0; shift -= 8) b.push_back(static_cast<std::uint8_t>(v >> shift));
-    for (std::uint8_t v : {8, 6, 0, 0, 0, 0, 0, 0, 0}) b.push_back(v);  // depth, RGBA, methods, CRC (unchecked)
+    for (int v : {8, 6, 0, 0, 0, 0, 0, 0, 0}) b.push_back(static_cast<std::uint8_t>(v));  // depth, RGBA, methods, CRC (unchecked)
     return b;
 }
 

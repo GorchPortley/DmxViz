@@ -51,7 +51,7 @@ inline Bytes quadBuffer() {
     const float corners[4][3] = {{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}};
     for (const auto& c : corners)
         for (float v : c) putF(b, v);
-    for (std::uint16_t i : {0, 1, 2, 0, 2, 3}) put16(b, i);
+    for (int i : {0, 1, 2, 0, 2, 3}) put16(b, static_cast<std::uint16_t>(i));
     return b;
 }
 

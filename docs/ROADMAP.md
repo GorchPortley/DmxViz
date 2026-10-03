@@ -33,8 +33,9 @@ owner after review.
 - [x] Performance: `tools/sim_bench` (500 fixtures / 1200 beams / 64 universes: simulation about 0.9 ms and 0 heap
   allocations per frame, CI step), decode skipped for unchanged DMX, haze cost budget, quarter-resolution haze and
   automatic quality (`src/render/README.md`, section "Performance")
-- [ ] Code review and refactor pass
-- [ ] User guide
+- [x] Correctness review: sanitizer + mutation pass (see Robustness below)
+- [ ] Readability review and refactor pass (code clarity for hobbyist contributors)
+- [x] User guide (`docs/USER_GUIDE.md`)
 - [x] Robustness: ASan/UBSan and TSan clean (CI jobs `linux-sanitizers`, `linux-tsan`); deterministic
   mutation tests for every parser (`tests/robustness/`: Art-Net, sACN, Enttec, native/OFL/GDTF fixtures,
   glTF/OBJ/3DS, PNG/SVG, projects, clipboard, DMX config, settings); thread stress tests for the DMX module;
