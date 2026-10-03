@@ -1,11 +1,11 @@
 // ============================================================================
 // volumetric.glsl - pass 3: light scattered towards the camera by haze inside
-// each beam. Rendered at HALF resolution into an RGBA16F target with additive
+// each beam. Rendered at reduced (half or quarter) resolution into an RGBA16F target with additive
 // blending; upsample.glsl later adds it to the full-resolution HDR image.
 //
 // Per pixel and beam (one instanced draw, back faces of the beam hulls):
 //   1. intersect the view ray with the beam's cone analytically -> [s0, s1]
-//   2. clip the segment by the scene (half-res depth) and by the floor
+//   2. clip the segment by the scene (reduced-res depth) and by the floor
 //   3. march a few jittered samples through it and sum the in-scattered light
 //
 // Single scattering along the ray:
@@ -32,7 +32,7 @@ void main() {
 #ifdef FRAGMENT_SHADER
 flat in int v_beam;
 
-uniform sampler2D u_halfDepth;  // rg = min / max scene distance of each 2x2 full-res block
+uniform sampler2D u_volumeDepth;  // rg = min / max scene distance of each block of full-res pixels
 uniform sampler3D u_noise;      // tileable 3D noise for drifting haze
 
 out vec4 o_color;
@@ -131,10 +131,10 @@ void main() {
     ivec2 pixel = ivec2(gl_FragCoord.xy);
     // The farthest depth of the 2x2 block: beams continue behind thin objects;
     // the depth-aware upsample sorts out the pixels that are actually in front.
-    float sceneDistance = texelFetch(u_halfDepth, pixel, 0).g;
+    float sceneDistance = texelFetch(u_volumeDepth, pixel, 0).g;
 
     vec3 ro = frame.cameraPos.xyz;
-    vec3 rd = viewRayDirection(gl_FragCoord.xy * frame.halfViewport.zw);
+    vec3 rd = viewRayDirection(gl_FragCoord.xy * frame.volumeViewport.zw);
     Beam b = beams[v_beam];
 
     float s0, s1;
@@ -168,7 +168,7 @@ void main() {
     bool front0, front1;
     vec2 uv0 = worldToUv(ro + rd * s0, front0);
     vec2 uv1 = worldToUv(ro + rd * s1, front1);
-    float screenLength = (front0 && front1) ? length((uv1 - uv0) * frame.halfViewport.xy) : 1e4;
+    float screenLength = (front0 && front1) ? length((uv1 - uv0) * frame.volumeViewport.xy) : 1e4;
     int steps = int(clamp(screenLength / frame.params2.z, frame.params.z, frame.params.w));
 
     float jitter = interleavedGradientNoise(gl_FragCoord.xy);

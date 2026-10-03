@@ -59,7 +59,21 @@ void EnvironmentPanel::draw(EditorContext& ctx) {
     perUser(ImGui::SliderFloat("Pixels per step", &quality.marchPixelsPerStep, 2.0f, 24.0f, "%.1f"));
     ImGui::SetItemTooltip("Larger values use fewer steps per beam: faster but more banding.");
     perUser(ImGui::SliderFloat("Haze forward scatter", &quality.hazePhaseG, 0.0f, 0.95f, "%.2f"));
+    int resolution = static_cast<int>(quality.volumetricResolution);
+    if (perUser(ImGui::Combo("Haze resolution", &resolution, "Half\0Quarter (faster)\0")))
+        quality.volumetricResolution = static_cast<render::VolumetricResolution>(resolution);
+    ImGui::SetItemTooltip("Size of the haze image relative to the view. Quarter is about 4x cheaper but softer.");
     ImGui::EndDisabled();
+    perUser(ImGui::Checkbox("Automatic quality", &quality.autoQuality));
+    ImGui::SetItemTooltip(
+        "Lowers the haze steps and then its resolution while frames take longer than the target frame time.");
+    if (quality.autoQuality) {
+        perUser(ImGui::SliderFloat("Target frame time", &quality.targetFrameMs, 8.0f, 50.0f, "%.1f ms"));
+        const render::RenderStats& stats = ctx.renderer.stats();
+        if (stats.qualityLevel > 0)
+            ImGui::TextDisabled("Reduced: level %d, 1/%d resolution, up to %.0f steps", stats.qualityLevel,
+                                stats.volumetricDivisor, static_cast<double>(stats.volumetricMaxSteps));
+    }
     perUser(ImGui::Checkbox("Lens glow", &quality.lensGlow));
     ImGui::SameLine();
     perUser(ImGui::Checkbox("Bloom", &quality.bloom));

@@ -39,6 +39,14 @@ SandboxOptions parseSandboxOptions(int argc, char** argv) {
             o.startTime = std::atof(next());
         } else if (a == "--no-ui") {
             o.showUi = false;
+        } else if (a == "--no-volumetrics") {
+            o.volumetrics = false;
+        } else if (a == "--auto-quality") {
+            o.autoQuality = true;
+        } else if (a == "--target-ms") {
+            o.targetFrameMs = static_cast<float>(std::atof(next()));
+        } else if (a == "--vol-res") {
+            o.quarterResVolumetrics = std::string_view(next()) == "quarter";
         } else if (a == "--width") {
             o.width = std::atoi(next());
         } else if (a == "--height") {
@@ -63,6 +71,11 @@ void SandboxApp::init() {
     ImGui::GetIO().IniFilename = nullptr;
 
     if (!renderer_.init()) log::error("sandbox", "renderer failed to initialise");
+    render::RenderSettings& settings = renderer_.settings();
+    settings.volumetrics = options_.volumetrics;
+    if (options_.quarterResVolumetrics) settings.volumetricResolution = render::VolumetricResolution::Quarter;
+    settings.autoQuality = options_.autoQuality;
+    settings.targetFrameMs = options_.targetFrameMs;
     viewport_ = std::make_unique<render::ViewportTarget>();
 
     DemoStage::Rig rig = DemoStage::Rig::Show;
@@ -157,6 +170,12 @@ void SandboxApp::frame() {
     sg_commit();
 
     cpuFrameMs_ = stm_ms(stm_since(frameStart));
+    if (frameIndex_ > 0) {
+        cpuFrameMsSum_ += cpuFrameMs_;
+        sceneMsSum_ += sceneMs;
+        renderMsSum_ += renderMs;
+        ++timedFrames_;
+    }
     ++frameIndex_;
     if (options_.frames > 0 && frameIndex_ >= static_cast<std::uint64_t>(options_.frames)) sapp_request_quit();
 }
@@ -171,6 +190,9 @@ void SandboxApp::drawOverlay(double sceneMs, double renderMs) {
         ImGui::Text("draw calls %d", s.drawCalls);
         ImGui::Text("mesh instances %d", s.meshInstances);
         ImGui::Text("beams %d -> beam instances %d", s.beams, s.beamInstances);
+        ImGui::Text("haze 1/%d res, <= %.1f steps, %.1f Mpx covered, quality level %d", s.volumetricDivisor,
+                    static_cast<double>(s.volumetricMaxSteps), static_cast<double>(s.volumetricCoverageMPixels),
+                    s.qualityLevel);
         ImGui::Separator();
         render::Environment& env = scene_.environment;
         ImGui::SliderFloat("haze", &env.hazeDensity, 0.0f, 1.0f);
@@ -187,6 +209,12 @@ void SandboxApp::drawOverlay(double sceneMs, double renderMs) {
         ImGui::SameLine();
         ImGui::Checkbox("bloom##on", &rs.bloom);
         ImGui::SliderInt("max march steps", &rs.maxMarchSteps, rs.minMarchSteps, 48);
+        bool quarter = rs.volumetricResolution == render::VolumetricResolution::Quarter;
+        if (ImGui::Checkbox("quarter-res haze", &quarter))
+            rs.volumetricResolution =
+                quarter ? render::VolumetricResolution::Quarter : render::VolumetricResolution::Half;
+        ImGui::SameLine();
+        ImGui::Checkbox("auto quality", &rs.autoQuality);
     }
     ImGui::End();
 }
@@ -199,6 +227,16 @@ void SandboxApp::event(const sapp_event* ev) {
 }
 
 void SandboxApp::cleanup() {
+    if (timedFrames_ > 0) {
+        const double n = static_cast<double>(timedFrames_);
+        const render::RenderStats& s = renderer_.stats();
+        // Under a software rasteriser (xvfb + llvmpipe) "render record" contains the GPU work too.
+        log::info("sandbox",
+                  "{} frames timed: CPU frame {:.2f} ms avg (scene {:.2f}, render record {:.2f}); {} beams -> {} "
+                  "instances, {} draw calls; haze 1/{} res, <= {:.1f} steps, quality level {}",
+                  timedFrames_, cpuFrameMsSum_ / n, sceneMsSum_ / n, renderMsSum_ / n, s.beams, s.beamInstances,
+                  s.drawCalls, s.volumetricDivisor, static_cast<double>(s.volumetricMaxSteps), s.qualityLevel);
+    }
     viewport_.reset();
     renderer_.shutdown();
     simgui_shutdown();

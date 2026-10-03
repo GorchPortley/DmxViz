@@ -24,9 +24,10 @@ struct ViewportTarget::Impl {
     DepthTarget depth;       // D32F    hardware depth (tests only, never sampled)
     RenderTarget ldr;        // RGBA8   final image shown by the UI
 
-    // Half resolution
-    RenderTarget halfDepth;  // RG32F min/max distance
-    RenderTarget volume;     // RGBA16F in-scattered beam light
+    // Volumetric resolution: 1/volumeDivisor of the viewport (2 = half, 4 = quarter)
+    int volumeDivisor = 2;
+    RenderTarget volumeDepth;  // RG32F min/max distance of each divisor x divisor block of full-res pixels
+    RenderTarget volume;       // RGBA16F in-scattered beam light
 
     // Bloom chain: level 0 = half res, each next level half of the previous.
     std::array<RenderTarget, kBloomLevels> bloom;
@@ -49,6 +50,9 @@ struct ViewportTarget::Impl {
     }
 
     void createTargets(int w, int h);
+    // Re-creates only the volumetric targets when the resolution setting changed (cheap to call every frame).
+    void setVolumeDivisor(int divisor);
+    void createVolumeTargets();
     void destroyTargets();
     void destroyAll();
 };

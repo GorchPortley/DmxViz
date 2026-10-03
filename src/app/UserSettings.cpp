@@ -33,6 +33,10 @@ json qualityToJson(const render::RenderSettings& q) {
     j["minMarchSteps"] = q.minMarchSteps;
     j["maxMarchSteps"] = q.maxMarchSteps;
     j["marchPixelsPerStep"] = q.marchPixelsPerStep;
+    j["volumetricResolution"] = static_cast<int>(q.volumetricResolution);
+    j["volumetricBudget"] = q.volumetricBudget;
+    j["autoQuality"] = q.autoQuality;
+    j["targetFrameMs"] = q.targetFrameMs;
     j["hazePhaseG"] = q.hazePhaseG;
     j["clipBeamsAtFloor"] = q.clipBeamsAtFloor;
     j["lensGlow"] = q.lensGlow;
@@ -49,6 +53,12 @@ bool qualityFromJson(const json& j, render::RenderSettings& quality) {
         q.minMarchSteps = j.value("minMarchSteps", q.minMarchSteps);
         q.maxMarchSteps = j.value("maxMarchSteps", q.maxMarchSteps);
         q.marchPixelsPerStep = j.value("marchPixelsPerStep", q.marchPixelsPerStep);
+        const int resolution = j.value("volumetricResolution", static_cast<int>(q.volumetricResolution));
+        if (resolution >= 0 && resolution <= static_cast<int>(render::VolumetricResolution::Quarter))
+            q.volumetricResolution = static_cast<render::VolumetricResolution>(resolution);
+        q.volumetricBudget = j.value("volumetricBudget", q.volumetricBudget);
+        q.autoQuality = j.value("autoQuality", q.autoQuality);
+        q.targetFrameMs = j.value("targetFrameMs", q.targetFrameMs);
         q.hazePhaseG = j.value("hazePhaseG", q.hazePhaseG);
         q.clipBeamsAtFloor = j.value("clipBeamsAtFloor", q.clipBeamsAtFloor);
         q.lensGlow = j.value("lensGlow", q.lensGlow);

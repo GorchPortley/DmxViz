@@ -6,8 +6,8 @@ namespace dmxviz::render {
 namespace {
 
 enum DownsampleViews { kDsFrame = 0, kDsDistance = 1 };
-enum VolumeViews { kVolFrame = 0, kVolBeams = 1, kVolGobos = 2, kVolHalfDepth = 3, kVolNoise = 4 };
-enum UpsampleViews { kUpFrame = 0, kUpVolume = 1, kUpHalfDepth = 2, kUpDistance = 3 };
+enum VolumeViews { kVolFrame = 0, kVolBeams = 1, kVolGobos = 2, kVolDepth = 3, kVolNoise = 4 };
+enum UpsampleViews { kUpFrame = 0, kUpVolume = 1, kUpDepth = 2, kUpDistance = 3 };
 enum GlowViews { kGlowFrame = 0, kGlowSprites = 1, kGlowDistance = 2 };
 
 }  // namespace
@@ -17,14 +17,14 @@ bool BeamPasses::init() {
                             .storageBuffer(kDsFrame, 0)
                             .unfilterableTexture(kDsDistance, 0, "u_gDistance")
                             .build();
-    sg_pipeline_desc dp = fullscreenPipeline(downsampleShader_, kHalfDepthFormat, "depth-downsample");
+    sg_pipeline_desc dp = fullscreenPipeline(downsampleShader_, kVolumeDepthFormat, "depth-downsample");
     downsamplePipeline_ = sg_make_pipeline(&dp);
 
     volumeShader_ = ShaderProgram("volumetric.glsl")
                         .storageBuffer(kVolFrame, 0)
                         .storageBuffer(kVolBeams, 1)
                         .texture(kVolGobos, 0, "u_gobos", SG_IMAGETYPE_ARRAY)
-                        .unfilterableTexture(kVolHalfDepth, 1, "u_halfDepth")
+                        .unfilterableTexture(kVolDepth, 1, "u_volumeDepth")
                         .texture(kVolNoise, 2, "u_noise", SG_IMAGETYPE_3D)
                         .build();
     sg_pipeline_desc vp{};
@@ -40,13 +40,13 @@ bool BeamPasses::init() {
     vp.label = "volumetric";
     volumePipeline_ = sg_make_pipeline(&vp);
 
-    upsampleShader_ = ShaderProgram("upsample.glsl")
-                          .storageBuffer(kUpFrame, 0)
-                          .texture(kUpVolume, 0, "u_volume", SG_IMAGETYPE_2D, SG_IMAGESAMPLETYPE_FLOAT,
-                                   SG_SAMPLERTYPE_NONFILTERING)
-                          .unfilterableTexture(kUpHalfDepth, 1, "u_halfDepth")
-                          .unfilterableTexture(kUpDistance, 2, "u_gDistance")
-                          .build();
+    upsampleShader_ =
+        ShaderProgram("upsample.glsl")
+            .storageBuffer(kUpFrame, 0)
+            .texture(kUpVolume, 0, "u_volume", SG_IMAGETYPE_2D, SG_IMAGESAMPLETYPE_FLOAT, SG_SAMPLERTYPE_NONFILTERING)
+            .unfilterableTexture(kUpDepth, 1, "u_volumeDepth")
+            .unfilterableTexture(kUpDistance, 2, "u_gDistance")
+            .build();
     sg_pipeline_desc up = fullscreenPipeline(upsampleShader_, kHdrFormat, "volumetric-upsample");
     up.colors[0].blend = additiveBlend();
     upsamplePipeline_ = sg_make_pipeline(&up);
@@ -81,7 +81,7 @@ void BeamPasses::drawVolumetrics(PassContext& ctx, const HullMesh& hull, int vol
     ViewportTarget::Impl& v = ctx.view;
 
     // 3a. Half-res min/max distance.
-    beginColorPass(v.halfDepth, SG_LOADACTION_DONTCARE, "depth-downsample");
+    beginColorPass(v.volumeDepth, SG_LOADACTION_DONTCARE, "depth-downsample");
     sg_apply_pipeline(downsamplePipeline_);
     {
         sg_bindings bind{};
@@ -103,7 +103,7 @@ void BeamPasses::drawVolumetrics(PassContext& ctx, const HullMesh& hull, int vol
         bind.views[kVolFrame] = v.frameConstants.storageView();
         bind.views[kVolBeams] = v.beams.storageView();
         bind.views[kVolGobos] = goboAtlas;
-        bind.views[kVolHalfDepth] = v.halfDepth.texture;
+        bind.views[kVolDepth] = v.volumeDepth.texture;
         bind.views[kVolNoise] = noise;
         bind.samplers[0] = ctx.samplers.gobo;
         bind.samplers[1] = ctx.samplers.nearestClamp;
@@ -120,7 +120,7 @@ void BeamPasses::drawVolumetrics(PassContext& ctx, const HullMesh& hull, int vol
         sg_bindings bind{};
         bind.views[kUpFrame] = v.frameConstants.storageView();
         bind.views[kUpVolume] = v.volume.texture;
-        bind.views[kUpHalfDepth] = v.halfDepth.texture;
+        bind.views[kUpDepth] = v.volumeDepth.texture;
         bind.views[kUpDistance] = v.gDistance.texture;
         bind.samplers[0] = ctx.samplers.nearestClamp;
         bind.samplers[1] = ctx.samplers.nearestClamp;

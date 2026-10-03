@@ -28,7 +28,11 @@ owner after review.
 - [x] Demo show in `data/shows/`
 
 ## Milestone 3 – Hardening
-- [ ] Performance pass against NFR-1 (profiling, half-res tuning)
+- [ ] Performance pass against NFR-1 (profiling, half-res tuning): CPU side done, GPU side still to be measured on
+  real hardware
+- [x] Performance: `tools/sim_bench` (500 fixtures / 1200 beams / 64 universes: simulation about 0.9 ms and 0 heap
+  allocations per frame, CI step), decode skipped for unchanged DMX, haze cost budget, quarter-resolution haze and
+  automatic quality (`src/render/README.md`, section "Performance")
 - [ ] Code review and refactor pass
 - [ ] User guide
 

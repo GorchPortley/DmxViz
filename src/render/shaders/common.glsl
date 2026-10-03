@@ -24,11 +24,12 @@ layout(std430, binding = 0) readonly buffer FrameConstants {
     vec4 cameraPos;        // xyz = camera position, w = animation time (s)
     vec4 cameraForward;    // xyz = unit view direction, w = focal length in full-res pixels
     vec4 viewport;         // full res: width, height, 1/width, 1/height
-    vec4 halfViewport;     // half res: width, height, 1/width, 1/height
+    vec4 volumeViewport;   // volumetric target (half or quarter res): width, height, 1/width, 1/height
     vec4 haze;             // x = scattering coefficient (1/m), y = density variation, z = beam brightness, w = phase g
     vec4 ambientExposure;  // rgb = ambient light (HDR units), w = exposure
     vec4 params;           // x = HDR units per nit, y = frame counter, z = min march steps, w = max march steps
-    vec4 params2;          // x = clip beams at floor (0/1), y = bloom strength, z = half-res pixels per step, w = unused
+    vec4 params2;          // x = clip beams at floor (0/1), y = bloom strength, z = volume-target pixels per step,
+                           // w = volume resolution divisor (2 or 4)
 } frame;
 
 // Unit direction of the camera ray through a screen position (uv in 0..1 over the target).

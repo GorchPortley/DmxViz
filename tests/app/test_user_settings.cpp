@@ -36,6 +36,10 @@ render::RenderSettings fastQuality() {
     q.hazePhaseG = 0.4f;
     q.bloom = false;
     q.tonemapper = render::Tonemapper::AcesPerChannel;
+    q.volumetricResolution = render::VolumetricResolution::Quarter;
+    q.volumetricBudget = 12.0f;
+    q.autoQuality = true;
+    q.targetFrameMs = 33.3f;
     return q;
 }
 
@@ -73,6 +77,10 @@ TEST_CASE("UserSettings: quality survives a restart") {
     CHECK(loaded.maxMarchSteps == 33);
     CHECK(loaded.hazePhaseG == doctest::Approx(0.4f));
     CHECK(loaded.bloom == false);
+    CHECK(loaded.volumetricResolution == render::VolumetricResolution::Quarter);
+    CHECK(loaded.volumetricBudget == doctest::Approx(12.0f));
+    CHECK(loaded.autoQuality == true);
+    CHECK(loaded.targetFrameMs == doctest::Approx(33.3f));
     CHECK(loaded.tonemapper == render::Tonemapper::AcesPerChannel);
     CHECK(loaded.lensGlow == true);  // untouched fields keep their default
 }

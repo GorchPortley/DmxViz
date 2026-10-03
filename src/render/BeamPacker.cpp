@@ -14,6 +14,12 @@ using namespace beammath;
 // corners are than the circle (used for conservative culling).
 const float kHullPolygonScale = 1.0f / std::cos(kPi / kHullSegments);
 
+// Smallest hull silhouette (in pixels of the volumetric target) that still gets a haze march.
+constexpr float kMinVolumePixels = 1.0f;
+
+// The step cap the cost budget may lower the march to at the very least.
+constexpr float kBudgetMinSteps = 3.0f;
+
 glm::vec3 safeNormalize(const glm::vec3& v, const glm::vec3& fallback) {
     const float len = glm::length(v);
     return len > 1e-6f ? v / len : fallback;
@@ -33,10 +39,13 @@ glm::vec3 perpendicularUp(const glm::vec3& dir, const glm::vec3& upHint) {
 }  // namespace
 
 void BeamPacker::pack(std::span<const BeamState> beams, const Frustum& frustum, const glm::vec3& cameraPos,
-                      const RenderSettings& settings, GoboAtlas& atlas) {
+                      const RenderSettings& settings, GoboAtlas& atlas, const VolumeView& volume) {
     instances_.clear();
     surfaceOnly_.clear();
     glows_.clear();
+    cameraPos_ = cameraPos;
+    volume_ = volume;
+    coveragePixels_ = 0.0f;
 
     for (const BeamState& b : beams) {
         const float lumens = std::max(b.luminousFlux, 0.0f) * std::max(b.intensity, 0.0f);
@@ -119,6 +128,16 @@ void BeamPacker::pack(std::span<const BeamState> beams, const Frustum& frustum, 
 
     volumetricCount_ = static_cast<int>(instances_.size());
     instances_.insert(instances_.end(), surfaceOnly_.begin(), surfaceOnly_.end());
+
+    // Cost control of the haze pass: its work is about coveragePixels x steps. If that exceeds the budget, lower
+    // the cap on the steps, even below minMarchSteps (down to kBudgetMinSteps: noisier haze, but the upsample
+    // blurs it). Beyond that only a lower resolution helps, which the automatic quality takes care of.
+    const float minSteps = static_cast<float>(std::max(settings.minMarchSteps, 1));
+    const float maxSteps = std::max(static_cast<float>(settings.maxMarchSteps), minSteps);
+    marchStepCap_ = maxSteps;
+    if (settings.volumetricBudget > 0.0f && coveragePixels_ > 1.0f)
+        marchStepCap_ = std::clamp(settings.volumetricBudget * 1.0e6f / coveragePixels_,
+                                   std::min(minSteps, kBudgetMinSteps), maxSteps);
 }
 
 void BeamPacker::addInstance(const BeamState& b, const Frame& f, const BeamProfile& profile, float peakCandela,
@@ -161,7 +180,14 @@ void BeamPacker::addInstance(const BeamState& b, const Frame& f, const BeamProfi
     g.profile = {profile.tanBeam, profile.exponent, profile.tanField, profile.tanCutoff};
     g.apex = {z0x, z0y, lensRadius, patternTemplate.apex.w};
 
-    const bool volume = b.castsVolume && b.shape != BeamShape::Glow;
+    bool volume = b.castsVolume && b.shape != BeamShape::Glow;
+    if (volume) {
+        // Beams that cover less than a pixel of the volumetric target cannot be seen in the haze: skip the march.
+        const float coverage =
+            hullCoveragePixels(hull, b.position, f.dir, cameraPos_, volume_.focalPixels, volume_.pixels);
+        volume = coverage >= kMinVolumePixels;
+        if (volume) coveragePixels_ += coverage;
+    }
     (volume ? instances_ : surfaceOnly_).push_back(g);
 }
 

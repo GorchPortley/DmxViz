@@ -58,6 +58,11 @@ struct RenderStats {
     int beams = 0;
     int beamInstances = 0;  // beams after prism facet expansion
     float gpuMs = 0.0f;     // 0 when unavailable
+    // Haze pass (see RenderSettings): what it was asked to do this frame.
+    int volumetricDivisor = 2;               // volume target resolution divisor (2 = half, 4 = quarter)
+    float volumetricMaxSteps = 0.0f;         // march step cap after the cost budget
+    float volumetricCoverageMPixels = 0.0f;  // estimated millions of volume pixels covered by haze beams
+    int qualityLevel = 0;                    // automatic quality level in use (0 = as configured)
 };
 
 }  // namespace dmxviz::render

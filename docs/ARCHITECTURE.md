@@ -301,13 +301,14 @@ the sokol headers in the build tree: the API is the post-2025 *views* API
    (sampled from a gobo **texture array**, rotated, blurred via mip bias by
    focus/frost), iris, framing blades, inverse-square falloff, Lambert + a
    simple GGX specular. Ambient + emissive added in a full-screen pass.
-3. **Volumetric beams** (half res, additive): the same instanced cone hulls.
+3. **Volumetric beams** (half or quarter res, additive): the same instanced cone hulls.
    Fragment intersects the view ray with the beam cone analytically, clips the
    segment against scene depth (from a half-res depth min/max buffer), and
    ray-marches 12–24 jittered steps through it, sampling the gobo projection,
    haze density (× optional 3D noise for drifting haze), inverse-square falloff
    and a Henyey–Greenstein phase function (bright when looking into the beam).
-   Bilateral, depth-aware upsample into the HDR target.
+   Bilateral, depth-aware upsample into the HDR target. The cost is controlled by the haze resolution, a
+   coverage x steps budget and an automatic quality level (see `src/render/README.md`, "Performance").
 4. **Lens glow / flares**: camera-facing sprites at each lens, scaled by how
    directly the camera looks into the beam; depth-tested softly.
 5. **Bloom**: 6-level dual-filter (13-tap down / tent up) on the HDR target.

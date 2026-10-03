@@ -2,6 +2,7 @@
 
 #include "assets/AssetLibrary.h"
 #include "core/Log.h"
+#include "render/AutoQuality.h"
 #include "render/BeamMath.h"
 #include "render/BeamPacker.h"
 #include "render/BeamPasses.h"
@@ -20,6 +21,7 @@
 #include "sokol_imgui.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <vector>
 
@@ -29,7 +31,7 @@
 //             upload per-view buffers, bake new gobos
 //   1 gbuffer        full res   meshes -> albedo, normal, distance, HDR (ambient + emissive)
 //   2 spot lights    full res   all beams light the surfaces           (1 draw)
-//   3 volumetrics    half res   depth min/max, haze ray-march, upsample  (1 draw for all beams)
+//   3 volumetrics    half/quarter res   depth min/max, haze ray-march, upsample  (1 draw for all beams)
 //   4 lens glow      full res   one sprite per lens                     (1 draw)
 //   5 bloom          6 levels   13-tap down / tent up
 //   6 composite      full res   tonemap, outline, grid, debug lines -> RGBA8
@@ -57,10 +59,9 @@ void ViewportTarget::Impl::createTargets(int w, int h) {
     hdr.create(w, h, kHdrFormat, "hdr");
     depth.create(w, h, "depth");
     ldr.create(w, h, kLdrFormat, "viewport-color");
-    const int hw = (w + 1) / 2, hh = (h + 1) / 2;
-    halfDepth.create(hw, hh, kHalfDepthFormat, "half-depth");
-    volume.create(hw, hh, kVolumeFormat, "volumetric");
-    int bw = hw, bh = hh;
+    createVolumeTargets();
+    // The bloom chain always starts at half res, whatever the haze resolution is.
+    int bw = (w + 1) / 2, bh = (h + 1) / 2;
     for (RenderTarget& level : bloom) {
         level.create(bw, bh, kBloomFormat, "bloom");
         bw = std::max(bw / 2, 1);
@@ -68,8 +69,24 @@ void ViewportTarget::Impl::createTargets(int w, int h) {
     }
 }
 
+void ViewportTarget::Impl::createVolumeTargets() {
+    const int vw = (width + volumeDivisor - 1) / volumeDivisor, vh = (height + volumeDivisor - 1) / volumeDivisor;
+    volumeDepth.create(vw, vh, kVolumeDepthFormat, "volume-depth");
+    volume.create(vw, vh, kVolumeFormat, "volumetric");
+}
+
+void ViewportTarget::Impl::setVolumeDivisor(int divisor) {
+    divisor = divisor >= 4 ? 4 : 2;
+    if (divisor == volumeDivisor) return;
+    volumeDivisor = divisor;
+    if (!volume.image.id) return;  // no targets yet: createTargets() will use the new divisor
+    volumeDepth.destroy();
+    volume.destroy();
+    createVolumeTargets();
+}
+
 void ViewportTarget::Impl::destroyTargets() {
-    for (RenderTarget* t : {&gAlbedo, &gNormal, &gDistance, &hdr, &ldr, &halfDepth, &volume}) t->destroy();
+    for (RenderTarget* t : {&gAlbedo, &gNormal, &gDistance, &hdr, &ldr, &volumeDepth, &volume}) t->destroy();
     for (RenderTarget& t : bloom) t.destroy();
     depth.destroy();
 }
@@ -121,7 +138,10 @@ std::uint64_t ViewportTarget::imguiTexture() const {
 
 struct Renderer::Impl {
     bool ready = false;
-    RenderSettings settings;
+    RenderSettings settings;  // what the user configured
+    RenderSettings active;    // settings with the automatic quality applied: what this frame renders with
+    AutoQuality autoQuality;
+    std::chrono::steady_clock::time_point lastCommit{};
     RenderStats stats;
     std::uint64_t frame = 0;  // advanced by sg_commit (commit listener)
 
@@ -142,7 +162,16 @@ struct Renderer::Impl {
     std::vector<MeshBatch> batches;
     std::vector<LineVertexGpu> lineData;
 
-    static void onCommit(void* self) { ++static_cast<Impl*>(self)->frame; }
+    // Called by sokol after every sg_commit: advances the frame counter and feeds the frame period to the
+    // automatic quality.
+    static void onCommit(void* self) {
+        Impl& r = *static_cast<Impl*>(self);
+        ++r.frame;
+        const auto now = std::chrono::steady_clock::now();
+        if (r.lastCommit.time_since_epoch().count() != 0)
+            r.autoQuality.onFrame(std::chrono::duration<float>(now - r.lastCommit).count(), r.settings);
+        r.lastCommit = now;
+    }
 
     void packMeshes(const RenderScene& scene, const beammath::Frustum& frustum);
     FrameGpu makeFrameConstants(const ViewportTarget::Impl& view, const Camera& camera, const RenderScene& scene) const;
@@ -167,7 +196,7 @@ bool Renderer::init() {
     sg_add_commit_listener({&Impl::onCommit, &r});
     r.ready = ok;
     if (ok)
-        log::info("render", "renderer initialised (deferred spot lighting, half-res volumetric beams)");
+        log::info("render", "renderer initialised (deferred spot lighting, reduced-resolution volumetric beams)");
     else
         log::error("render", "renderer initialisation failed; see the sokol log above");
     return ok;
@@ -245,18 +274,18 @@ FrameGpu Renderer::Impl::makeFrameConstants(const ViewportTarget::Impl& view, co
     const float focalPx = 0.5f * static_cast<float>(view.height) * camera.projection[1][1];
     f.cameraForward = {-glm::normalize(glm::vec3(invView[2])), focalPx};
     const float w = static_cast<float>(view.width), h = static_cast<float>(view.height);
-    const float hw = static_cast<float>(view.halfDepth.width), hh = static_cast<float>(view.halfDepth.height);
+    const float vw = static_cast<float>(view.volumeDepth.width), vh = static_cast<float>(view.volumeDepth.height);
     f.viewport = {w, h, 1.0f / w, 1.0f / h};
-    f.halfViewport = {hw, hh, 1.0f / hw, 1.0f / hh};
+    f.volumeViewport = {vw, vh, 1.0f / vw, 1.0f / vh};
     f.haze = {std::max(env.hazeDensity, 0.0f) * beammath::kHazeScatteringAtFullDensity,
               std::clamp(env.hazeVariation, 0.0f, 1.0f), std::max(env.beamBrightness, 0.0f),
-              std::clamp(settings.hazePhaseG, -0.9f, 0.9f)};
+              std::clamp(active.hazePhaseG, -0.9f, 0.9f)};
     f.ambientExposure = {env.ambient, std::max(env.exposure, 0.0f)};
     f.params = {beammath::kHdrPerNit, static_cast<float>(frame % 65536),
-                static_cast<float>(std::max(settings.minMarchSteps, 1)),
-                static_cast<float>(std::max(settings.maxMarchSteps, std::max(settings.minMarchSteps, 1)))};
-    f.params2 = {settings.clipBeamsAtFloor ? 1.0f : 0.0f, std::clamp(env.bloomStrength, 0.0f, 1.0f),
-                 std::max(settings.marchPixelsPerStep, 0.5f), 0.0f};
+                std::min(static_cast<float>(std::max(active.minMarchSteps, 1)), beamPacker.marchStepCap()),
+                beamPacker.marchStepCap()};
+    f.params2 = {active.clipBeamsAtFloor ? 1.0f : 0.0f, std::clamp(env.bloomStrength, 0.0f, 1.0f),
+                 std::max(active.marchPixelsPerStep, 0.5f), static_cast<float>(view.volumeDivisor)};
     return f;
 }
 
@@ -266,6 +295,9 @@ void Renderer::render(ViewportTarget& target, const Camera& camera, const Render
     ViewportTarget::Impl& view = target.impl();
     if (!view.ldr.image.id) target.resize(16, 16);
     r.stats = {};
+    r.active = r.autoQuality.apply(r.settings);
+    r.stats.qualityLevel = r.autoQuality.level();
+    view.setVolumeDivisor(r.active.volumetricResolution == VolumetricResolution::Quarter ? 4 : 2);
     r.stats.meshInstances = static_cast<int>(scene.meshes.size());
     r.stats.beams = static_cast<int>(scene.beams.size());
     if (!r.ready) return;
@@ -277,7 +309,11 @@ void Renderer::render(ViewportTarget& target, const Camera& camera, const Render
 
     r.meshes.sync(assets);
     r.packMeshes(scene, frustum);
-    r.beamPacker.pack(scene.beams, frustum, cameraPos, r.settings, r.gobos);
+    const float focalPx = 0.5f * static_cast<float>(view.height) * camera.projection[1][1];
+    const float volumeScale = 1.0f / static_cast<float>(view.volumeDivisor);
+    const VolumeView volumeView{focalPx * volumeScale, static_cast<float>(view.volumeDepth.width) *
+                                                           static_cast<float>(view.volumeDepth.height)};
+    r.beamPacker.pack(scene.beams, frustum, cameraPos, r.active, r.gobos, volumeView);
     r.gobos.flush(assets, r.frame);
 
     const FrameGpu frameConstants = r.makeFrameConstants(view, camera, scene);
@@ -295,18 +331,21 @@ void Renderer::render(ViewportTarget& target, const Camera& camera, const Render
     view.lines.upload(r.lineData.data(), r.lineData.size() * sizeof(LineVertexGpu), r.frame);
 
     r.stats.beamInstances = static_cast<int>(beams.size());
+    r.stats.volumetricDivisor = view.volumeDivisor;
+    r.stats.volumetricMaxSteps = r.beamPacker.marchStepCap();
+    r.stats.volumetricCoverageMPixels = r.beamPacker.volumetricCoveragePixels() * 1.0e-6f;
 
     // --- passes ----------------------------------------------------------------
-    PassContext ctx{view, scene, r.settings, r.samplers, r.stats};
+    PassContext ctx{view, scene, r.active, r.samplers, r.stats};
     r.surface.drawGBuffer(ctx, r.meshes, r.batches);
     r.surface.drawSpotLights(ctx, r.hull, static_cast<int>(beams.size()), r.gobos.textureView());
-    const bool haze = r.settings.volumetrics && scene.environment.hazeDensity > 0.0f &&
-                      scene.environment.beamBrightness > 0.0f;
+    const bool haze =
+        r.active.volumetrics && scene.environment.hazeDensity > 0.0f && scene.environment.beamBrightness > 0.0f;
     if (haze)
         r.beamPasses.drawVolumetrics(ctx, r.hull, r.beamPacker.volumetricCount(), r.gobos.textureView(),
                                      r.noise.textureView());
-    if (r.settings.lensGlow) r.beamPasses.drawLensGlow(ctx, static_cast<int>(glows.size()));
-    if (r.settings.bloom) r.post.drawBloom(ctx);
+    if (r.active.lensGlow) r.beamPasses.drawLensGlow(ctx, static_cast<int>(glows.size()));
+    if (r.active.bloom) r.post.drawBloom(ctx);
     r.post.drawComposite(ctx, static_cast<int>(r.lineData.size()));
 }
 
