@@ -8,6 +8,7 @@
 // the programmer and other writers run concurrently with it.
 
 #include "../dmx/DmxTestUtil.h"
+#include "TestEnv.h"
 
 #include "dmx/DmxManager.h"
 #include "dmx/interfaces/ArtNetInterface.h"
@@ -21,7 +22,7 @@
 #include <nlohmann/json.hpp>
 
 #include <atomic>
-#include <cstdlib>
+#include <algorithm>
 #include <thread>
 #include <vector>
 
@@ -31,9 +32,7 @@ namespace {
 
 // DMXVIZ_STRESS_SCALE=10 makes the stress tests ten times longer (for TSan runs on a laptop).
 int stressScale() {
-    const char* text = std::getenv("DMXVIZ_STRESS_SCALE");
-    const int scale = text ? std::atoi(text) : 1;
-    return scale < 1 ? 1 : scale;
+    return std::max(1, dmxviz::robust::envInt("DMXVIZ_STRESS_SCALE", 1));
 }
 
 bool isUniform(const UniverseData& frame) {

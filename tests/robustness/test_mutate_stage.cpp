@@ -2,6 +2,7 @@
 // text, the DMX configuration block and the user settings file.
 
 #include "Mutate.h"
+#include "TestEnv.h"
 
 #include "app/UserSettings.h"
 #include "core/Limits.h"
@@ -14,7 +15,6 @@
 #include <doctest/doctest.h>
 #include <nlohmann/json.hpp>
 
-#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -125,7 +125,8 @@ TEST_CASE("mutation: DMX configuration block") {
     Rng rng(0xD3C0F103);
     // A configuration with every interface type, built the way the UI does.
     dmx::DmxManager source(dmx::DmxManagerOptions{false});
-    for (const char* type : {"Art-Net", "sACN", "Loopback", dmx::EnttecProInterface::kTypeName, dmx::OpenDmxInterface::kTypeName})
+    for (const char* type :
+         {"Art-Net", "sACN", "Loopback", dmx::EnttecProInterface::kTypeName, dmx::OpenDmxInterface::kTypeName})
         source.addInterface(type);
     source.setRoutes({{1, 1}, {2, 2}, {3, 3}, {4, 4}});
     const json config = source.saveConfig();
@@ -207,7 +208,7 @@ TEST_CASE("limits: deeply nested projects and fixtures are rejected, not recurse
 
 // 1,000,001 nodes: slow (about a second), so only with DMXVIZ_SLOW_TESTS=1 (the sanitizer CI job).
 TEST_CASE("limits: a project with more than a million nodes is rejected" *
-          doctest::skip(!std::getenv("DMXVIZ_SLOW_TESTS"))) {
+          doctest::skip(envInt("DMXVIZ_SLOW_TESTS", 0) == 0)) {
     std::string text = R"({"formatVersion":1,"scene":{"nodes":[)";
     for (std::size_t i = 0; i <= limits::kMaxSceneNodes; ++i) text += i ? ",{}" : "{}";
     text += "]}}";
