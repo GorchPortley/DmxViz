@@ -301,6 +301,7 @@ private:
     void readPhysical(const pugi::xml_node& ft);
     void scanWheelUsage(const pugi::xml_node& ft);
     void readWheels(const pugi::xml_node& ft);
+    void detectMillimetres(const pugi::xml_node& ft);
     void readModels(const pugi::xml_node& ft);
     void buildGeometry(const pugi::xml_node& ft);
     bool readModes(const pugi::xml_node& ft, std::string* error);
@@ -351,7 +352,8 @@ private:
     std::vector<Expansion> expansions_;
     std::map<std::string, std::size_t, std::less<>> expansionOfRoot_;
     int geometryCount_ = 0;
-    float baseKelvin_ = 0.0f;  // colour temperature of the first beam (CTO/CTB reference)
+    float baseKelvin_ = 0.0f;   // colour temperature of the first beam (CTO/CTB reference)
+    float lengthScale_ = 1.0f;  // file length unit in metres: 1, or 0.001 for files that wrongly use millimetres
     bool movementSet_[2] = {false, false};
     pugi::xml_document doc_;
 };
@@ -386,6 +388,7 @@ std::optional<FixtureType> GdtfImport::run(std::string* error) {
     readPhysical(ft);
     scanWheelUsage(ft);
     readWheels(ft);
+    detectMillimetres(ft);
     readModels(ft);
     buildGeometry(ft);
     if (!readModes(ft, error)) return std::nullopt;
@@ -627,14 +630,40 @@ void GdtfImport::readWheels(const pugi::xml_node& ft) {
 
 // -------------------------------------------------------------- models
 
+// GDTF lengths are metres. A fixture that is several metres wide cannot be right, so a file
+// with such numbers is taken to be in millimetres (a known exporter mistake) and scaled.
+void GdtfImport::detectMillimetres(const pugi::xml_node& ft) {
+    constexpr double kImplausible = 20.0;  // m
+    double largest = 0.0;
+    for (const pugi::xml_node& m : ft.child("Models").children("Model"))
+        for (const char* key : {"Length", "Width", "Height"}) largest = std::max(largest, numberAttr(m, key, 0.0));
+    if (largest <= kImplausible) {
+        // Positions: look at the translation of every geometry element.
+        auto scan = [&](auto&& self, const pugi::xml_node& parent) -> void {
+            for (const pugi::xml_node& child : parent.children()) {
+                if (child.type() != pugi::node_element) continue;
+                const GdtfTransform transform = parseTransform(attr(child, "Position"));
+                const glm::vec3 a = glm::abs(transform.translation);
+                largest = std::max(largest, static_cast<double>(std::max({a.x, a.y, a.z})));
+                self(self, child);
+            }
+        };
+        scan(scan, ft.child("Geometries"));
+    }
+    if (largest > kImplausible) {
+        lengthScale_ = 0.001f;
+        warn(std::format("lengths up to {:.0f} look like millimetres; the file is read as millimetres", largest));
+    }
+}
+
 void GdtfImport::readModels(const pugi::xml_node& ft) {
     for (const pugi::xml_node& m : ft.child("Models").children("Model")) {
         ModelInfo info;
         const std::string name = attr(m, "Name");
         // GDTF: Length along X, Width along Y, Height along Z (all metres); our Y is GDTF Z.
-        const auto length = static_cast<float>(numberAttr(m, "Length", 0.0));
-        const auto width = static_cast<float>(numberAttr(m, "Width", 0.0));
-        const auto height = static_cast<float>(numberAttr(m, "Height", 0.0));
+        const auto length = static_cast<float>(numberAttr(m, "Length", 0.0)) * lengthScale_;
+        const auto width = static_cast<float>(numberAttr(m, "Width", 0.0)) * lengthScale_;
+        const auto height = static_cast<float>(numberAttr(m, "Height", 0.0)) * lengthScale_;
         info.size = glm::vec3(length, height, width);
 
         const std::string primitive = lowerCase(attr(m, "PrimitiveType"));
@@ -690,7 +719,7 @@ BeamSpec GdtfImport::readBeam(const pugi::xml_node& node) {
     BeamSpec b;
     const auto type = parseBeamType(lowerCase(attr(node, "BeamType")));
     b.type = type.value_or(BeamType::Wash);  // GDTF "None" and unknown types
-    b.lensRadius = static_cast<float>(numberAttr(node, "BeamRadius", 0.05));
+    b.lensRadius = static_cast<float>(numberAttr(node, "BeamRadius", 0.05)) * lengthScale_;
     if (b.lensRadius <= 0.0f) b.lensRadius = 0.05f;
     b.beamAngle = degToRad(static_cast<float>(std::max(numberAttr(node, "BeamAngle", 25.0), 0.1)));
     b.fieldAngle = degToRad(static_cast<float>(numberAttr(node, "FieldAngle", 25.0)));
@@ -731,7 +760,7 @@ Geometry GdtfImport::expandGeometry(const pugi::xml_node& node, const std::strin
     const GdtfTransform transform = parseTransform(position);
     if (transform.valid) {
         if (transform.scaled) warn(std::format("geometry \"{}\": scaling in Position is ignored", g.name));
-        g.position = frameConversion() * transform.translation;
+        g.position = frameConversion() * (transform.translation * lengthScale_);
         g.rotation = frameConversion() * glm::quat_cast(transform.rotation) * glm::inverse(frameConversion());
     } else if (!position.empty()) {
         warn(std::format("geometry \"{}\": cannot read Position \"{}\"", g.name, position));

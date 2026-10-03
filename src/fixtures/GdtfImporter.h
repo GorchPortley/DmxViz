@@ -20,8 +20,9 @@
 // Conversion notes:
 //   * GDTF is Z-up (beam along -Z); DmxViz is Y-up (beam along -Y):
 //     (x, y, z)_gdtf -> (x, z, -y), a rotation of -90 degrees about X. Geometry positions
-//     and model sizes in description.xml are metres already; 3DS model files are
-//     millimetres (FixtureAssets scales them while loading).
+//     and model sizes in description.xml are metres already (a file whose numbers are
+//     implausibly large, over 20, is read as millimetres and scaled with a warning);
+//     3DS model files are millimetres (FixtureAssets scales them while loading).
 //   * Wheel and emitter colours are CIE xyY and become linear sRGB.
 //   * GeometryReferences are expanded: each reference becomes a copy of the
 //     referenced geometry (named after the reference, its children prefixed with that name),

@@ -468,3 +468,34 @@ TEST_CASE("GDTF import: unknown elements and bad references only warn") {
     CHECK(t.modes[0].channels[0].geometry.empty());  // unknown geometry: whole fixture
     CHECK(t.geometry.children.empty());
 }
+
+TEST_CASE("GDTF import: a file written in millimetres is detected") {
+    // Same body as a metre file, every length multiplied by 1000.
+    const std::string xml = R"xml(<GDTF DataVersion="1.1"><FixtureType Name="Millimetre Wash" Manufacturer="Test">
+  <Models>
+   <Model Name="Base" Length="300" Width="250" Height="200" PrimitiveType="Cube"/>
+  </Models>
+  <Geometries>
+   <Geometry Name="Body" Model="Base">
+    <Beam Name="Beam" BeamType="Wash" BeamRadius="60" BeamAngle="30" FieldAngle="40"
+          Position="{1,0,0,0}{0,1,0,0}{0,0,1,0}{50,20,-150,1}"/>
+   </Geometry>
+  </Geometries>
+  <DMXModes><DMXMode Name="M" Geometry="Body"><DMXChannels>
+   <DMXChannel Offset="1" Geometry="Beam"><LogicalChannel Attribute="Dimmer">
+    <ChannelFunction Name="D" Attribute="Dimmer" DMXFrom="0/1"/></LogicalChannel></DMXChannel>
+  </DMXChannels></DMXMode></DMXModes>
+</FixtureType></GDTF>)xml";
+    std::vector<std::string> warnings;
+    const FixtureType t = importXml(xml, &warnings, false, false);
+    CHECK(anyWarningContains(warnings, "millimetres"));
+    checkVec(t.geometry.model.size, 0.3f, 0.2f, 0.25f);
+    REQUIRE(t.geometry.children.size() == 1);
+    checkVec(t.geometry.children[0].position, 0.05f, -0.15f, -0.02f);
+    CHECK(t.geometry.children[0].beam.lensRadius == Approx(0.06f));
+
+    // a normal metre file does not trigger the heuristic
+    std::vector<std::string> metreWarnings;
+    importXml(movingHeadXml(), &metreWarnings);
+    CHECK_FALSE(anyWarningContains(metreWarnings, "millimetres"));
+}
