@@ -7,6 +7,7 @@
 #include <glm/gtx/euler_angles.hpp>
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -25,7 +26,7 @@ using OJson = nlohmann::ordered_json;
 // Six significant digits keep files readable (no 0.30000001192092896) and are
 // far below anything that matters for a fixture definition.
 double clean(double v) {
-    if (!std::isfinite(v)) return 0.0;
+    if (!std::isfinite(v) || v == 0.0) return 0.0;  // also turns -0.0 into 0
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%.6g", v);
     return std::strtod(buf, nullptr);
@@ -34,10 +35,26 @@ double clean(double v) {
 OJson vec2Json(const glm::vec2& v) { return OJson::array({clean(v.x), clean(v.y)}); }
 OJson vec3Json(const glm::vec3& v) { return OJson::array({clean(v.x), clean(v.y), clean(v.z)}); }
 
+// Euler angles (degrees) of R = Rx(x) * Ry(y) * Rz(z), the order glm::eulerAngleXYZ uses
+// and eulerDegreesToQuat() reads back. At y = +-90 degrees x and z are not unique
+// (gimbal lock): z is set to 0 so the same rotation always writes the same text.
 glm::vec3 quatToEulerDegrees(const glm::quat& q) {
-    float x = 0, y = 0, z = 0;
-    glm::extractEulerAngleXYZ(glm::mat4_cast(q), x, y, z);
-    return {radToDeg(x), radToDeg(y), radToDeg(z)};
+    const glm::mat3 m = glm::mat3_cast(q);  // m[column][row]
+    const float cosY = std::sqrt(m[0][0] * m[0][0] + m[1][0] * m[1][0]);
+    const float y = std::atan2(m[2][0], cosY);  // stable close to +-90 degrees, unlike asin
+    float x = 0.0f, z = 0.0f;
+    if (cosY > 1e-4f) {
+        x = std::atan2(-m[2][1], m[2][2]);
+        z = std::atan2(-m[1][0], m[0][0]);
+    } else {
+        x = std::atan2(m[1][2], m[1][1]);
+    }
+    // Write 180 rather than -180 so the sign of a rounding error cannot change the text.
+    auto degrees = [](float radians) {
+        const float d = radToDeg(radians);
+        return d < -179.9995f ? 180.0f : d;
+    };
+    return {degrees(x), degrees(y), degrees(z)};
 }
 
 glm::quat eulerDegreesToQuat(const glm::vec3& deg) {
