@@ -60,9 +60,9 @@ stage::Transform poseAt(const glm::vec3& point) {
 
 }  // namespace
 
-NodeId FixtureSpawner::create(EditorContext& ctx, std::string_view typeId, std::string_view modeName,
-                              const stage::Transform& placement, NodeId trussToHangOn, const glm::vec3& hangPoint) {
-    const fixtures::FixtureType* type = ctx.fixtures.find(typeId);
+NodeId FixtureSpawner::create(std::string_view typeId, std::string_view modeName, const stage::Transform& placement,
+                              NodeId trussToHangOn, const glm::vec3& hangPoint) {
+    const fixtures::FixtureType* type = library_.find(typeId);
     if (type == nullptr || type->modes.empty()) {
         log::warn("ui", "cannot add fixture: unknown fixture type '{}'", typeId);
         return kInvalidNode;
@@ -70,45 +70,44 @@ NodeId FixtureSpawner::create(EditorContext& ctx, std::string_view typeId, std::
     const fixtures::DmxMode* mode = modeName.empty() ? nullptr : type->findMode(modeName);
     if (mode == nullptr) mode = &type->modes.front();
 
-    const PatchAllocator used(ctx.scene, ctx.fixtures);
+    const PatchAllocator used(scene_, library_);
     const stage::DmxPatch patch = used.findFree(mode->footprint);
     if (!patch.patched()) log::warn("ui", "no free DMX address for {}: fixture added unpatched", type->displayName());
 
     // Creating and hanging are separate commands, but the user should see one undo step.
-    ctx.commands.beginBatch("Add fixture");
+    commands_.beginBatch("Add fixture");
     auto add = std::make_unique<stage::AddNodeCommand>(
-        stage::factory::fixture(std::string(typeId), mode->name, patch, nextFixtureNumber(ctx.scene)), placement);
+        stage::factory::fixture(std::string(typeId), mode->name, patch, nextFixtureNumber(scene_)), placement);
     stage::AddNodeCommand* addRaw = add.get();
-    const NodeId id = ctx.commands.execute(std::move(add)) != nullptr ? addRaw->createdId() : kInvalidNode;
+    const NodeId id = commands_.execute(std::move(add)) != nullptr ? addRaw->createdId() : kInvalidNode;
     if (id != kInvalidNode && trussToHangOn != kInvalidNode) {
-        if (auto hang = stage::tools::hangOnTrussCommand(ctx.scene, id, trussToHangOn, hangPoint))
-            ctx.commands.execute(std::move(hang));
+        if (auto hang = stage::tools::hangOnTrussCommand(scene_, id, trussToHangOn, hangPoint))
+            commands_.execute(std::move(hang));
     }
-    ctx.commands.endBatch();
+    commands_.endBatch();
 
     if (id != kInvalidNode) {
-        ctx.selection.set(id);
+        selection_.set(id);
         log::info("ui", "added {} at {}.{}", type->displayName(), patch.universe, patch.address);
     }
     return id;
 }
 
-NodeId FixtureSpawner::addAtHit(EditorContext& ctx, std::string_view typeId, std::string_view modeName,
-                                const stage::PickHit& hit) {
-    const stage::Node* target = ctx.scene.find(hit.node);
+NodeId FixtureSpawner::addAtHit(std::string_view typeId, std::string_view modeName, const stage::PickHit& hit) {
+    const stage::Node* target = scene_.find(hit.node);
     if (target != nullptr && target->kind() == stage::NodeKind::Truss)
-        return create(ctx, typeId, modeName, poseAt(hit.point), hit.node, hit.point);
-    return create(ctx, typeId, modeName, poseOnSurface(hit.point, hit.normal), kInvalidNode, hit.point);
+        return create(typeId, modeName, poseAt(hit.point), hit.node, hit.point);
+    return create(typeId, modeName, poseOnSurface(hit.point, hit.normal), kInvalidNode, hit.point);
 }
 
-NodeId FixtureSpawner::addNearSelection(EditorContext& ctx, std::string_view typeId, std::string_view modeName) {
+NodeId FixtureSpawner::addNearSelection(std::string_view typeId, std::string_view modeName) {
     // A selected truss gets the fixture, spread along its length.
-    for (const NodeId id : ctx.selection.ids()) {
-        const stage::Node* node = ctx.scene.find(id);
+    for (const NodeId id : selection_.ids()) {
+        const stage::Node* node = scene_.find(id);
         const stage::TrussContent* truss = node != nullptr ? node->as<stage::TrussContent>() : nullptr;
         if (truss == nullptr) continue;
 
-        const glm::mat4 world = ctx.scene.worldMatrix(id);
+        const glm::mat4 world = scene_.worldMatrix(id);
         const glm::vec3 centre = glm::vec3(world[3]);
         const glm::vec3 axis = glm::normalize(glm::vec3(world[0]));
         const float halfLength = truss->piece == stage::TrussPiece::Straight ? truss->straight.length * 0.5f : 0.0f;
@@ -116,16 +115,16 @@ NodeId FixtureSpawner::addNearSelection(EditorContext& ctx, std::string_view typ
         for (float offset = 0.0f; offset <= halfLength; offset += kSpotSpacing) {
             const glm::vec3 right = centre + axis * offset;
             const glm::vec3 left = centre - axis * offset;
-            if (!spotTaken(ctx.scene, right)) {
+            if (!spotTaken(scene_, right)) {
                 spot = right;
                 break;
             }
-            if (offset > 0.0f && !spotTaken(ctx.scene, left)) {
+            if (offset > 0.0f && !spotTaken(scene_, left)) {
                 spot = left;
                 break;
             }
         }
-        return create(ctx, typeId, modeName, poseAt(spot), id, spot);
+        return create(typeId, modeName, poseAt(spot), id, spot);
     }
 
     // Otherwise a free spot in rows around the stage centre.
@@ -134,12 +133,12 @@ NodeId FixtureSpawner::addNearSelection(EditorContext& ctx, std::string_view typ
         const int ring = k % 15;
         const float x = static_cast<float>((ring + 1) / 2) * kSpotSpacing * (ring % 2 == 1 ? 1.0f : -1.0f);
         const glm::vec3 candidate(x, kStageCentreHeight, static_cast<float>(k / 15) * kSpotSpacing);
-        if (!spotTaken(ctx.scene, candidate)) {
+        if (!spotTaken(scene_, candidate)) {
             spot = candidate;
             break;
         }
     }
-    return create(ctx, typeId, modeName, poseAt(spot), kInvalidNode, spot);
+    return create(typeId, modeName, poseAt(spot), kInvalidNode, spot);
 }
 
 }  // namespace dmxviz::ui

@@ -169,10 +169,12 @@ void FixtureLibraryPanel::drawRow(EditorContext& ctx, const Row& row) {
 
     const bool selected = type.id == selectedId_;
     ImGui::Indent();
+    const ImVec2 rowStart = ImGui::GetCursorScreenPos();
+    const float rowRight = rowStart.x + ImGui::GetContentRegionAvail().x;
     if (ImGui::Selectable(type.name.c_str(), selected, ImGuiSelectableFlags_AllowDoubleClick)) {
         select(type);
         if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-            FixtureSpawner::addNearSelection(ctx, type.id, chosenMode(type));
+            FixtureSpawner(ctx.scene, ctx.commands, ctx.selection, ctx.fixtures).addNearSelection(type.id, chosenMode(type));
     }
     ImGui::Unindent();
 
@@ -186,11 +188,14 @@ void FixtureLibraryPanel::drawRow(EditorContext& ctx, const Row& row) {
         ImGui::EndDragDropSource();
     }
 
+    // Mode summary at the right edge when the name leaves room for it; otherwise in the tooltip.
     char summary[48];
     formatModeSummary(type, summary, sizeof(summary));
-    const float width = ImGui::CalcTextSize(summary).x;
-    ImGui::SameLine(std::max(ImGui::GetCursorPosX(), ImGui::GetWindowContentRegionMax().x - width - 6.0f));
-    ImGui::TextDisabled("%s", summary);
+    const float summaryX = rowRight - ImGui::CalcTextSize(summary).x - 6.0f;
+    if (rowStart.x + ImGui::CalcTextSize(type.name.c_str()).x + 12.0f < summaryX)
+        ImGui::GetWindowDrawList()->AddText(ImVec2(summaryX, rowStart.y), ImGui::GetColorU32(ImGuiCol_TextDisabled), summary);
+    else
+        ImGui::SetItemTooltip("%s", summary);
 }
 
 void FixtureLibraryPanel::select(const fixtures::FixtureType& type) {
@@ -250,7 +255,7 @@ void FixtureLibraryPanel::drawDetails(EditorContext& ctx) {
     ImGui::TextDisabled("%d beam(s), %.0f W", type->beamCount(), static_cast<double>(type->physical.power));
 
     ImGui::BeginDisabled(type->modes.empty());
-    if (ImGui::Button("Add to scene")) FixtureSpawner::addNearSelection(ctx, type->id, chosenMode(*type));
+    if (ImGui::Button("Add to scene")) FixtureSpawner(ctx.scene, ctx.commands, ctx.selection, ctx.fixtures).addNearSelection(type->id, chosenMode(*type));
     ImGui::EndDisabled();
     ImGui::SetItemTooltip("Hangs on the selected truss, or appears above the stage. It is patched to the next free address.");
     ImGui::EndChild();

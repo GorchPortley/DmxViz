@@ -7,8 +7,11 @@
 // and is selected afterwards.
 
 #include "core/Id.h"
+#include "fixtures/FixtureLibrary.h"
+#include "stage/CommandStack.h"
 #include "stage/Picking.h"
-#include "ui/EditorContext.h"
+#include "stage/Scene.h"
+#include "stage/Selection.h"
 
 #include <string_view>
 
@@ -16,19 +19,27 @@ namespace dmxviz::ui {
 
 class FixtureSpawner {
 public:
+    FixtureSpawner(stage::Scene& scene, stage::CommandStack& commands, stage::Selection& selection,
+                   const fixtures::FixtureLibrary& library)
+        : scene_(scene), commands_(commands), selection_(selection), library_(library) {}
+
     // Drops a fixture at a picked point: onto a truss it hangs from the truss chord
     // (like the "hang on truss" tool), on any other surface it stands on it with its
     // beam pointing away from the surface. Returns the new node, kInvalidNode on failure.
-    static NodeId addAtHit(EditorContext& ctx, std::string_view typeId, std::string_view modeName,
-                           const stage::PickHit& hit);
+    NodeId addAtHit(std::string_view typeId, std::string_view modeName, const stage::PickHit& hit);
 
     // "Add to scene" without a pointer: hangs on the selected truss, otherwise appears
     // above the middle of the stage. Positions already taken by a fixture are skipped.
-    static NodeId addNearSelection(EditorContext& ctx, std::string_view typeId, std::string_view modeName);
+    NodeId addNearSelection(std::string_view typeId, std::string_view modeName);
 
 private:
-    static NodeId create(EditorContext& ctx, std::string_view typeId, std::string_view modeName,
-                         const stage::Transform& placement, NodeId trussToHangOn, const glm::vec3& hangPoint);
+    NodeId create(std::string_view typeId, std::string_view modeName, const stage::Transform& placement,
+                  NodeId trussToHangOn, const glm::vec3& hangPoint);
+
+    stage::Scene& scene_;
+    stage::CommandStack& commands_;
+    stage::Selection& selection_;
+    const fixtures::FixtureLibrary& library_;
 };
 
 }  // namespace dmxviz::ui

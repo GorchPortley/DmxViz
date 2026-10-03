@@ -429,7 +429,7 @@ void ViewportPanel::handleFixtureDrop(EditorContext& ctx, const ViewRect& rect, 
             draw->AddCircle(mouse, 9.0f, color, 24, 2.0f);
             draw->AddText(ImVec2(mouse.x + 14.0f, mouse.y + 6.0f), color, label);
         }
-        if (payload->IsDelivery() && hit) FixtureSpawner::addAtHit(ctx, drag->typeId, drag->modeName, *hit);
+        if (payload->IsDelivery() && hit) FixtureSpawner(ctx.scene, ctx.commands, ctx.selection, ctx.fixtures).addAtHit(drag->typeId, drag->modeName, *hit);
     }
     ImGui::EndDragDropTarget();
 }
