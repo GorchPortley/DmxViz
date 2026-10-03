@@ -15,17 +15,17 @@ owner after review.
 | Stream | Scope | Status |
 |--------|-------|--------|
 | WS1 DMX | UniverseStore + merge, Art-Net, sACN, Enttec Pro, Open DMX, loopback, serial/NIC enumeration, DmxManager, tests | ✅ |
-| WS2 Fixtures | FixtureType model, native format + spec, library, OFL + GDTF import, runtime decode + physics, starter library, tests | ✅ (7 more starter fixtures pending) |
+| WS2 Fixtures | FixtureType model, native format + spec, library, OFL + GDTF import, runtime decode + physics, starter library, tests | ✅ |
 | WS3 Render | G-buffer, spot lighting with gobos, volumetric beams, glow, bloom, tonemap, gobo atlas, render sandbox | ✅ |
 | WS4 Stage | Scene graph, commands/undo, truss + deck builders, model loaders, picking, project files, tests | ✅ |
 
 ## Milestone 2 – Integration & UI
-- [ ] Simulation glue (stage + fixtures + DMX → RenderScene)
-- [ ] Viewport camera, selection, gizmos
-- [ ] Outliner, inspector, stage builder tools
-- [ ] Fixture library browser + fixture editor
-- [ ] Patch, DMX interfaces, DMX monitor, test console, environment, log panels
-- [ ] Demo show in `data/shows/`
+- [x] Simulation glue (stage + fixtures + DMX → RenderScene)
+- [x] Viewport camera, selection, gizmos
+- [x] Outliner, inspector, stage builder tools
+- [x] Fixture library browser + fixture editor
+- [x] Patch, DMX interfaces, DMX monitor, test console, environment, log panels
+- [x] Demo show in `data/shows/`
 
 ## Milestone 3 – Hardening
 - [ ] Performance pass against NFR-1 (profiling, half-res tuning)
