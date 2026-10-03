@@ -74,8 +74,8 @@ void OutlinerPanel::draw(EditorContext& ctx) {
     scrollTo_ = kInvalidNode;
 
     if (rows_.empty())
-        ImGui::TextDisabled(filter_.IsActive() ? "No node matches the filter."
-                                               : "The scene is empty. Use the Add menu.");
+        ImGui::TextDisabled(
+            "%s", filter_.IsActive() ? "No node matches the filter." : "The scene is empty. Use the Add menu.");
     drawTail(ctx, ImGui::GetFrameHeight());
     drawContextMenu(ctx);
     ImGui::EndChild();
@@ -207,6 +207,9 @@ void OutlinerPanel::drawRow(EditorContext& ctx, const Row& row, std::size_t inde
     const float iconSize = h * 0.7f;
     drawNodeKindIcon(list, ImVec2(x, min.y + (h - iconSize) * 0.5f), iconSize, node->kind(),
                      effectivelyVisible ? nodeKindColor(node->kind()) : withAlpha(nodeKindColor(node->kind()), 0.4f));
+    // The icon is small, so name the kind when the mouse rests on it.
+    if (rowHovered && ImGui::GetMousePos().x < x + iconSize + 3.0f && ImGui::GetMousePos().x >= x - 3.0f)
+        ImGui::SetTooltip("%s", std::string(nodeKindLabel(node->kind())).c_str());
     x += iconSize + 6.0f;
 
     const float togglesX = min.x + width - 2.0f * h;
@@ -227,14 +230,14 @@ void OutlinerPanel::drawRow(EditorContext& ctx, const Row& row, std::size_t inde
     const bool ownVisible = node->data().visible;
     ImGui::SetCursorScreenPos(ImVec2(togglesX, min.y));
     if (ImGui::InvisibleButton("##visible", ImVec2(h, h))) actions::setVisible(ctx, {row.id}, !ownVisible);
-    ImGui::SetItemTooltip(ownVisible ? "Hide" : "Show");
+    ImGui::SetItemTooltip("%s", ownVisible ? "Hide" : "Show");
     drawEyeIcon(list, ImVec2(togglesX + h * 0.15f, min.y + h * 0.15f), h * 0.7f, ownVisible,
                 !ownVisible ? withAlpha(textColor, 0.5f) : (effectivelyVisible ? textColor : dimColor));
 
     const bool ownLocked = node->data().locked;
     ImGui::SetCursorScreenPos(ImVec2(togglesX + h, min.y));
     if (ImGui::InvisibleButton("##locked", ImVec2(h, h))) actions::setLocked(ctx, {row.id}, !ownLocked);
-    ImGui::SetItemTooltip(ownLocked ? "Unlock" : "Lock");
+    ImGui::SetItemTooltip("%s", ownLocked ? "Unlock" : "Lock");
     const bool lockHot = ImGui::IsItemHovered() || rowHovered;
     if (ownLocked || lockHot)
         drawLockIcon(list, ImVec2(togglesX + h + h * 0.15f, min.y + h * 0.15f), h * 0.7f, ownLocked,
@@ -246,7 +249,7 @@ void OutlinerPanel::drawRow(EditorContext& ctx, const Row& row, std::size_t inde
 
 void OutlinerPanel::drawRename(EditorContext& ctx, const ImVec2& pos, float width) {
     ImGui::SetCursorScreenPos(pos);
-    ImGui::SetNextItemWidth(std::max(width, 40.0f));
+    ImGui::SetNextItemWidth(std::max(width, ImGui::GetFontSize() * 3.0f));
     if (renameNeedsFocus_) {
         ImGui::SetKeyboardFocusHere();
         renameNeedsFocus_ = false;

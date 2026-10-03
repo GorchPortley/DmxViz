@@ -12,7 +12,7 @@
 #include "imgui.h"
 
 #include <algorithm>
-#include <array>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <utility>
@@ -91,10 +91,11 @@ void selectionInfo(std::size_t count) {
 bool okCancelButtons(bool canApply, const char* applyLabel, bool& applied) {
     ImGui::Separator();
     ImGui::BeginDisabled(!canApply);
-    applied = ImGui::Button(applyLabel, ImVec2(110.0f, 0.0f));
+    const float buttonWidth = ImGui::GetFontSize() * 7.0f;
+    applied = ImGui::Button(applyLabel, ImVec2(buttonWidth, 0.0f));
     ImGui::EndDisabled();
     ImGui::SameLine();
-    const bool cancelled = ImGui::Button("Cancel", ImVec2(110.0f, 0.0f));
+    const bool cancelled = ImGui::Button("Cancel", ImVec2(buttonWidth, 0.0f));
     return applied || cancelled;
 }
 

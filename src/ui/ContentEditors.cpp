@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <format>
+#include <iterator>
 #include <string>
 #include <utility>
 #include <vector>
@@ -206,10 +207,17 @@ void truss(EditSession& edit, TrussContent& c) {
     switch (c.piece) {
         case TrussPiece::Straight: {
             dragFloat(edit, "Length", c.straight.length, 0.05f, 0.1f, 100.0f);
-            ImGui::TextDisabled("Standard lengths");
+            ImGui::TextDisabled("Standard lengths (m)");
+            const float lineEnd = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
+            bool firstButton = true;
             for (float length : standardTrussLengths()) {
-                ImGui::SameLine();
                 const std::string label = std::format("{:g}##len", length);
+                // Wrap to the next line instead of running out of the panel.
+                const float width =
+                    ImGui::CalcTextSize(label.c_str(), nullptr, true).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+                if (!firstButton && ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x + width < lineEnd)
+                    ImGui::SameLine();
+                firstButton = false;
                 if (edit.touch(ImGui::SmallButton(label.c_str()), "Truss length")) {
                     c.straight.length = length;
                     c.straight.segments.clear();

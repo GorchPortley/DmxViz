@@ -67,7 +67,7 @@ const char* InspectorPanel::title() const {
 
 void InspectorPanel::draw(EditorContext& ctx) {
     pollModelDialog(ctx);
-    ImGui::PushItemWidth(-ImGui::GetFontSize() * 8.5f);
+    ImGui::PushItemWidth(-ImGui::GetFontSize() * 7.5f);
 
     const Node* primary = ctx.scene.find(ctx.selection.primary());
     if (ctx.selection.empty() || primary == nullptr) {
@@ -102,11 +102,11 @@ void InspectorPanel::drawHeader(EditorContext& ctx, const Node& node, EditSessio
 
     char name[256];
     std::snprintf(name, sizeof(name), "%s", data.name.c_str());
-    if (edit.touch(ImGui::InputText("Name", name, sizeof(name)), "Name")) data.name = name;
+    if (edit.touch(ImGui::InputText("Name", name, sizeof(name)), "Name", "Rename")) data.name = name;
 
-    edit.touch(ImGui::Checkbox("Visible", &data.visible), data.visible ? "Show" : "Hide");
+    edit.touch(ImGui::Checkbox("Visible", &data.visible), "Visible", data.visible ? "Show" : "Hide");
     ImGui::SameLine();
-    edit.touch(ImGui::Checkbox("Locked", &data.locked), data.locked ? "Lock" : "Unlock");
+    edit.touch(ImGui::Checkbox("Locked", &data.locked), "Locked", data.locked ? "Lock" : "Unlock");
 
     const std::vector<Layer>& layers = ctx.scene.layers();
     if (layers.size() > 1) {
@@ -133,7 +133,7 @@ glm::vec3 InspectorPanel::eulerFor(const Node& node) {
     // Keep the angles the user typed while they still describe the same rotation.
     if (node.id() != eulerNode_ || std::abs(glm::dot(q, eulerQuat_)) < 0.99999f) {
         eulerNode_ = node.id();
-        euler_ = node.transform().eulerDegrees();
+        euler_ = node.transform().eulerDegrees() + glm::vec3(0.0f);  // + 0 turns -0.0 into 0.0
         eulerQuat_ = q;
     }
     return euler_;
@@ -146,8 +146,8 @@ void InspectorPanel::drawTransform(EditorContext& ctx, const Node& node) {
     glm::vec3 euler = eulerFor(node);
     EditSession edit(ctx);
 
-    edit.touch(ImGui::DragFloat3("Position", &t.position.x, 0.01f, 0.0f, 0.0f, "%.3f m"), "Move");
-    if (edit.touch(ImGui::DragFloat3("Rotation", &euler.x, 0.25f, 0.0f, 0.0f, "%.1f deg"), "Rotate")) {
+    edit.touch(ImGui::DragFloat3("Position (m)", &t.position.x, 0.01f, 0.0f, 0.0f, "%.3f"), "Position", "Move");
+    if (edit.touch(ImGui::DragFloat3("Rotation (deg)", &euler.x, 0.25f, 0.0f, 0.0f, "%.1f"), "Rotation", "Rotate")) {
         t.rotation = Transform::quatFromEulerDegrees(euler);
         euler_ = euler;
         eulerQuat_ = t.rotation;
@@ -155,7 +155,7 @@ void InspectorPanel::drawTransform(EditorContext& ctx, const Node& node) {
 
     const glm::vec3 oldScale = t.scale;
     if (edit.touch(ImGui::DragFloat3("Scale", &t.scale.x, 0.01f, 0.001f, 1000.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp),
-                   "Scale") &&
+                   "Scale", "Scale") &&
         uniformScale_) {
         // Keep the proportions: the component that moved decides the factor for all three.
         for (int i = 0; i < 3; ++i) {
@@ -170,11 +170,11 @@ void InspectorPanel::drawTransform(EditorContext& ctx, const Node& node) {
         t = Transform{};
         euler_ = glm::vec3(0.0f);
         eulerQuat_ = t.rotation;
-        edit.touch(true, "Reset transform");
+        edit.touch(true, "Reset transform", "Reset transform");
     }
 
     if (edit.changed()) {
-        ctx.commands.execute(std::make_unique<SetTransformCommand>(node.id(), t, "Set " + edit.label()));
+        ctx.commands.execute(std::make_unique<SetTransformCommand>(node.id(), t, edit.undoName()));
     }
     edit.finish();
 }
@@ -320,7 +320,7 @@ void InspectorPanel::drawMultiple(EditorContext& ctx) {
     // "Move by" works on offsets: the field always shows 0 and each change moves everything by that amount.
     EditSession moveEdit(ctx);
     glm::vec3 delta(0.0f);
-    if (moveEdit.touch(ImGui::DragFloat3("Move by (world)", &delta.x, 0.01f, 0.0f, 0.0f, "%.3f m"), "Move") &&
+    if (moveEdit.touch(ImGui::DragFloat3("Move by (m)", &delta.x, 0.01f, 0.0f, 0.0f, "%.3f"), "Move by", "Move") &&
         delta != glm::vec3(0.0f)) {
         std::vector<std::pair<NodeId, Transform>> targets;
         for (NodeId id : actions::editableTopLevel(ctx, ids))

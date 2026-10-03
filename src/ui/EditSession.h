@@ -30,12 +30,14 @@ class EditSession {
 public:
     explicit EditSession(EditorContext& ctx) : ctx_(ctx) {}
 
-    // Call directly after a widget with the widget's return value; `label`
-    // names the edit in the undo menu and identifies the merge key. Returns `widgetChanged`.
-    bool touch(bool widgetChanged, const char* label);
+    // Call directly after a widget with the widget's return value. `label` identifies the
+    // widget (merge key) and names the edit "Set <label>" in the undo menu, unless `undoName`
+    // gives a better one ("Move", "Hide"). Returns `widgetChanged`.
+    bool touch(bool widgetChanged, const char* label, const char* undoName = nullptr);
 
     bool changed() const { return changed_; }
     const std::string& label() const { return label_; }
+    const std::string& undoName() const { return undoName_; }
 
     // One command that sets the given node data; it merges with the previous
     // command of the same widget while a drag is in progress.
@@ -49,6 +51,7 @@ private:
     bool changed_ = false;
     bool gestureEnded_ = false;
     std::string label_;
+    std::string undoName_;
 };
 
 }  // namespace dmxviz::ui
