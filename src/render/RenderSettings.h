@@ -32,6 +32,12 @@ struct RenderSettings {
     float hazePhaseG = 0.7f;        // forward lobe of the haze phase function (Henyey-Greenstein g, 0..0.95);
                                     // 30 % of the scattering is isotropic on top of it
 
+    // --- automatic quality ---------------------------------------------------------
+    // Lowers the march steps and then the haze resolution while frames take longer than targetFrameMs, and
+    // raises them again when the frames fit (AutoQuality.h). Off by default so that renders are reproducible.
+    bool autoQuality = false;
+    float targetFrameMs = 16.7f;  // frame time to stay under (16.7 = 60 fps, 33.3 = 30 fps)
+
     // --- beam extent (applies to surface lighting and haze) -----------------------
     float maxBeamLength = 60.0f;    // m, hard cap on the length of a beam volume
     float minIlluminance = 0.5f;    // lux; a beam ends where its axis illuminance drops below this

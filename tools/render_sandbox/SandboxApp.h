@@ -6,6 +6,7 @@
 //   render_sandbox [--screenshot out.png] [--frames N] [--beams N] [--haze x]
 //                  [--camera front|side|top|audience|close] [--rig show|single|stress]
 //                  [--time seconds] [--no-ui] [--vol-res half|quarter] [--no-volumetrics]
+//                  [--auto-quality] [--target-ms 16.7]
 
 #include "DemoStage.h"
 #include "assets/AssetLibrary.h"
@@ -31,6 +32,8 @@ struct SandboxOptions {
     bool showUi = true;
     bool volumetrics = true;
     bool quarterResVolumetrics = false;
+    bool autoQuality = false;
+    float targetFrameMs = 16.7f;
     int width = 1600;
     int height = 900;
 };
