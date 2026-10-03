@@ -205,9 +205,10 @@ void PreviewSection::draw(EditorContext& ctx, const fixtures::FixtureType& type,
     const ImVec2 origin = ImGui::GetCursorScreenPos();
     ImGui::Image(ImTextureRef(target_.imguiTexture()), viewSize);
     handleViewportCameraInput(camera_, ImGui::IsItemHovered(), viewSize.y, io.DeltaTime);
+    ImGui::SetItemTooltip("Middle drag: orbit   Shift + middle drag: pan   Wheel: zoom");
 
     char caption[160];
-    std::snprintf(caption, sizeof(caption), "Preview, mode \"%s\"  (middle drag: orbit, wheel: zoom)", runtime_->mode().name.c_str());
+    std::snprintf(caption, sizeof(caption), "Preview, mode \"%s\"", runtime_->mode().name.c_str());
     ImGui::GetWindowDrawList()->AddText(ImVec2(origin.x + 8.0f, origin.y + 6.0f), IM_COL32(210, 210, 220, 200), caption);
 
     if (drawFaders()) applyFaders();

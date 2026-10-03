@@ -47,6 +47,8 @@ bool WheelsSection::draw(EditDocument& doc) {
     if (ImGui::BeginChild("##wheelList", ImVec2(listWidth, 0.0f), ImGuiChildFlags_Borders)) changed |= drawWheelList(type);
     ImGui::EndChild();
     ImGui::SameLine();
+    // The list may have removed a wheel just now: keep the selection inside the list.
+    selectedWheel_ = type.wheels.empty() ? 0 : std::clamp(selectedWheel_, 0, static_cast<int>(type.wheels.size()) - 1);
     if (ImGui::BeginChild("##wheelSlots", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders)) {
         if (type.wheels.empty()) ImGui::TextDisabled("This fixture has no wheels. Add one on the left.");
         else changed |= drawWheel(type, static_cast<std::size_t>(selectedWheel_));
@@ -196,7 +198,7 @@ bool WheelsSection::drawSlotRow(fixtures::FixtureType& type, Wheel& wheel, std::
 
     ImGui::TableSetColumnIndex(3);
     switch (slot.kind) {
-        case SlotKind::Open: ImGui::TextDisabled("Light passes unchanged"); break;
+        case SlotKind::Open: ImGui::TextDisabled("Light passes"); break;
         case SlotKind::Color: changed |= colorEditLinear("##color", slot.color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel); break;
         case SlotKind::Gobo:
         case SlotKind::AnimationWheel: changed |= drawImageSlot(type, slot, slotIndex); break;
