@@ -268,8 +268,8 @@ FrameGpu Renderer::Impl::makeFrameConstants(const ViewportTarget::Impl& view, co
               std::clamp(settings.hazePhaseG, -0.9f, 0.9f)};
     f.ambientExposure = {env.ambient, std::max(env.exposure, 0.0f)};
     f.params = {beammath::kHdrPerNit, static_cast<float>(frame % 65536),
-                static_cast<float>(std::max(settings.minMarchSteps, 1)),
-                static_cast<float>(std::max(settings.maxMarchSteps, std::max(settings.minMarchSteps, 1)))};
+                std::min(static_cast<float>(std::max(settings.minMarchSteps, 1)), beamPacker.marchStepCap()),
+                beamPacker.marchStepCap()};
     f.params2 = {settings.clipBeamsAtFloor ? 1.0f : 0.0f, std::clamp(env.bloomStrength, 0.0f, 1.0f),
                  std::max(settings.marchPixelsPerStep, 0.5f), static_cast<float>(view.volumeDivisor)};
     return f;
@@ -293,7 +293,11 @@ void Renderer::render(ViewportTarget& target, const Camera& camera, const Render
 
     r.meshes.sync(assets);
     r.packMeshes(scene, frustum);
-    r.beamPacker.pack(scene.beams, frustum, cameraPos, r.settings, r.gobos);
+    const float focalPx = 0.5f * static_cast<float>(view.height) * camera.projection[1][1];
+    const float volumeScale = 1.0f / static_cast<float>(view.volumeDivisor);
+    const VolumeView volumeView{focalPx * volumeScale, static_cast<float>(view.volumeDepth.width) *
+                                                           static_cast<float>(view.volumeDepth.height)};
+    r.beamPacker.pack(scene.beams, frustum, cameraPos, r.settings, r.gobos, volumeView);
     r.gobos.flush(assets, r.frame);
 
     const FrameGpu frameConstants = r.makeFrameConstants(view, camera, scene);
@@ -311,6 +315,9 @@ void Renderer::render(ViewportTarget& target, const Camera& camera, const Render
     view.lines.upload(r.lineData.data(), r.lineData.size() * sizeof(LineVertexGpu), r.frame);
 
     r.stats.beamInstances = static_cast<int>(beams.size());
+    r.stats.volumetricDivisor = view.volumeDivisor;
+    r.stats.volumetricMaxSteps = r.beamPacker.marchStepCap();
+    r.stats.volumetricCoverageMPixels = r.beamPacker.volumetricCoveragePixels() * 1.0e-6f;
 
     // --- passes ----------------------------------------------------------------
     PassContext ctx{view, scene, r.settings, r.samplers, r.stats};

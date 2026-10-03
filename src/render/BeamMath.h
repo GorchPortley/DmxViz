@@ -155,6 +155,24 @@ inline float lengthToFloor(const glm::vec3& lensPos, const glm::vec3& dir, const
     return std::clamp(axial + 0.05f, 0.0f, fallback);
 }
 
+// Rough number of target pixels the hull covers (its silhouette), for the cost estimate of the haze pass:
+// the shader shades every pixel of the hull, so coverage x march steps is the work a beam causes.
+// `focalPixels` is the camera focal length in pixels of the target being drawn. A beam seen from the side shows
+// the trapezoid between its two end discs, one pointing at the camera shows the far disc; the estimate blends the
+// two by the viewing angle. Capped at `maxPixels` (a hull cannot cover more than the whole target, however near).
+inline float hullCoveragePixels(const BeamHull& h, const glm::vec3& lensPos, const glm::vec3& dir,
+                                const glm::vec3& cameraPos, float focalPixels, float maxPixels) {
+    const float r0 = h.tanHalfAngle * h.apexDistance;
+    const float r1 = h.tanHalfAngle * (h.apexDistance + h.length);
+    const glm::vec3 toCamera = cameraPos - (lensPos + dir * (0.5f * h.length));
+    const float distance = std::max(glm::length(toCamera), 0.1f);
+    const float cosView = std::min(std::abs(glm::dot(dir, toCamera)) / distance, 1.0f);  // 1 = along the axis
+    const float sinView = std::sqrt(1.0f - cosView * cosView);
+    const float area = h.length * (r0 + r1) * sinView + kPi * r1 * r1 * cosView;  // m^2
+    const float pixelsPerMetre = focalPixels / distance;
+    return std::min(area * pixelsPerMetre * pixelsPerMetre, maxPixels);
+}
+
 // Axial distance where the on-axis illuminance I0 / (z + z0)^2 drops below minLux.
 inline float lengthByBrightness(float peakCandela, float apexDistance, float minLux) {
     if (minLux <= 0.0f) return 1e6f;

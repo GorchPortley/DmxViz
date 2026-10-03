@@ -31,6 +31,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -188,6 +189,8 @@ int main(int argc, char** argv) {
     const render::RenderSettings settings;
     const render::beammath::Frustum frustum = defaultFrustum();
     const glm::vec3 cameraPos(0.0f, 3.0f, 22.0f);
+    // 1080p with half-res haze: focal length of the 50 degree camera in volume pixels.
+    const render::VolumeView volumeView{0.5f * 540.0f / std::tan(degToRad(25.0f)), 960.0f * 540.0f};
 
     // --edit: the truss line that carries the first fixture is nudged every frame.
     const stage::Node* firstFixture = scene.find(rigFixtures.front().node);
@@ -218,13 +221,16 @@ int main(int argc, char** argv) {
         };
         run(snapshotSection, [&] { store.snapshot(snapshot); });
         run(simSection, [&] { simulation.update(scene, snapshot, static_cast<float>(kFrameTime), t, renderScene); });
-        run(packSection, [&] { packer.pack(renderScene.beams, frustum, cameraPos, settings, gobos); });
+        run(packSection, [&] { packer.pack(renderScene.beams, frustum, cameraPos, settings, gobos, volumeView); });
     }
 
     std::printf("rig: %d fixtures, %zu beams, %zu mesh instances per frame, %d universes\n", simulation.fixtureCount(),
                 renderScene.beams.size(), renderScene.meshes.size(), options.universes);
     std::printf("packed: %zu beam instances (%d volumetric), %zu lens glows after culling\n", packer.instances().size(),
                 packer.volumetricCount(), packer.glows().size());
+    std::printf("haze cost estimate (1080p, half res): %.1f M covered pixels, march step cap %.1f\n",
+                static_cast<double>(packer.volumetricCoveragePixels()) * 1.0e-6,
+                static_cast<double>(packer.marchStepCap()));
     std::printf("%d frames after %d warm-up frames%s, times in ms per frame\n\n", options.frames, options.warmup,
                 options.edit   ? " (scene edited every frame)"
                 : options.hold ? " (DMX held)"
