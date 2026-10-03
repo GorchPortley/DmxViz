@@ -32,7 +32,9 @@ void* allocateAligned(std::size_t size, std::size_t alignment) {
     return p;
 }
 
-void release(void* p) noexcept { std::free(p); }
+void release(void* p) noexcept {
+    std::free(p);
+}
 
 void releaseAligned(void* p) noexcept {
 #ifdef _WIN32
@@ -46,22 +48,46 @@ void releaseAligned(void* p) noexcept {
 
 namespace simbench {
 
-AllocStats allocStats() { return {gCount.load(std::memory_order_relaxed), gBytes.load(std::memory_order_relaxed)}; }
+AllocStats allocStats() {
+    return {gCount.load(std::memory_order_relaxed), gBytes.load(std::memory_order_relaxed)};
+}
 
 }  // namespace simbench
 
 // Global replacements (must live outside any namespace).
-void* operator new(std::size_t size) { return allocate(size); }
-void* operator new[](std::size_t size) { return allocate(size); }
-void* operator new(std::size_t size, std::align_val_t a) { return allocateAligned(size, static_cast<std::size_t>(a)); }
+void* operator new(std::size_t size) {
+    return allocate(size);
+}
+void* operator new[](std::size_t size) {
+    return allocate(size);
+}
+void* operator new(std::size_t size, std::align_val_t a) {
+    return allocateAligned(size, static_cast<std::size_t>(a));
+}
 void* operator new[](std::size_t size, std::align_val_t a) {
     return allocateAligned(size, static_cast<std::size_t>(a));
 }
-void operator delete(void* p) noexcept { release(p); }
-void operator delete[](void* p) noexcept { release(p); }
-void operator delete(void* p, std::size_t) noexcept { release(p); }
-void operator delete[](void* p, std::size_t) noexcept { release(p); }
-void operator delete(void* p, std::align_val_t) noexcept { releaseAligned(p); }
-void operator delete[](void* p, std::align_val_t) noexcept { releaseAligned(p); }
-void operator delete(void* p, std::size_t, std::align_val_t) noexcept { releaseAligned(p); }
-void operator delete[](void* p, std::size_t, std::align_val_t) noexcept { releaseAligned(p); }
+void operator delete(void* p) noexcept {
+    release(p);
+}
+void operator delete[](void* p) noexcept {
+    release(p);
+}
+void operator delete(void* p, std::size_t) noexcept {
+    release(p);
+}
+void operator delete[](void* p, std::size_t) noexcept {
+    release(p);
+}
+void operator delete(void* p, std::align_val_t) noexcept {
+    releaseAligned(p);
+}
+void operator delete[](void* p, std::align_val_t) noexcept {
+    releaseAligned(p);
+}
+void operator delete(void* p, std::size_t, std::align_val_t) noexcept {
+    releaseAligned(p);
+}
+void operator delete[](void* p, std::size_t, std::align_val_t) noexcept {
+    releaseAligned(p);
+}

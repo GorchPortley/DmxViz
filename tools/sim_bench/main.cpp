@@ -7,7 +7,8 @@
 //   * beam packer    render::BeamPacker::pack on the produced beams (CPU half of the volumetric pass)
 // and counts heap allocations (global operator new) for each part. Nothing is drawn: no window, no GPU.
 //
-// Usage: sim_bench [--frames N] [--warmup N] [--fixtures N] [--universes N] [--no-selection] [--edit]
+// Usage: sim_bench [--frames N] [--warmup N] [--fixtures N] [--universes N] [--no-selection] [--edit] [--hold]
+//   --hold   freeze the DMX values (a show that holds its look); the default animates every fixture every frame
 //   --edit   also moves one truss line (with its fixtures) every frame, like dragging a gizmo: this makes the
 //            simulation re-sync its fixture list and rebuild the static meshes every frame
 
@@ -49,6 +50,7 @@ struct Options {
     int universes = 64;
     bool selection = true;
     bool edit = false;
+    bool hold = false;
 };
 
 bool parseArgs(int argc, char** argv, Options& o) {
@@ -67,12 +69,17 @@ bool parseArgs(int argc, char** argv, Options& o) {
             o.selection = false;
             continue;
         }
+        if (a == "--hold") {
+            o.hold = true;
+            continue;
+        }
         if (a == "--edit") {
             o.edit = true;
             continue;
         }
         std::fprintf(stderr,
-                     "usage: sim_bench [--frames N] [--warmup N] [--fixtures N] [--universes N] [--no-selection] [--edit]\n");
+                     "usage: sim_bench [--frames N] [--warmup N] [--fixtures N] [--universes N] [--no-selection] "
+                     "[--edit] [--hold]\n");
         return false;
     }
     o.frames = std::max(o.frames, 1);
@@ -196,7 +203,7 @@ int main(int argc, char** argv) {
     const int total = options.warmup + options.frames;
     for (int frame = 0; frame < total; ++frame) {
         const double t = static_cast<double>(frame) * kFrameTime;
-        animator.animate(t, store);  // harness work: not measured
+        animator.animate(options.hold ? 0.0 : t, store);  // harness work: not measured
         if (options.edit) {
             editedTransform.position.x = 0.01f * static_cast<float>(frame % 100);
             scene.setTransform(editedNode, editedTransform);
@@ -210,18 +217,18 @@ int main(int argc, char** argv) {
                 fn();
         };
         run(snapshotSection, [&] { store.snapshot(snapshot); });
-        run(simSection, [&] {
-            simulation.update(scene, snapshot, static_cast<float>(kFrameTime), t, renderScene);
-        });
+        run(simSection, [&] { simulation.update(scene, snapshot, static_cast<float>(kFrameTime), t, renderScene); });
         run(packSection, [&] { packer.pack(renderScene.beams, frustum, cameraPos, settings, gobos); });
     }
 
     std::printf("rig: %d fixtures, %zu beams, %zu mesh instances per frame, %d universes\n", simulation.fixtureCount(),
                 renderScene.beams.size(), renderScene.meshes.size(), options.universes);
-    std::printf("packed: %zu beam instances (%d volumetric), %zu lens glows after culling\n",
-                packer.instances().size(), packer.volumetricCount(), packer.glows().size());
+    std::printf("packed: %zu beam instances (%d volumetric), %zu lens glows after culling\n", packer.instances().size(),
+                packer.volumetricCount(), packer.glows().size());
     std::printf("%d frames after %d warm-up frames%s, times in ms per frame\n\n", options.frames, options.warmup,
-                options.edit ? " (scene edited every frame)" : "");
+                options.edit   ? " (scene edited every frame)"
+                : options.hold ? " (DMX held)"
+                               : "");
     std::printf("%-14s %8s %8s %8s %8s %14s %12s\n", "part", "avg", "p50", "p95", "max", "allocs/frame", "bytes/frame");
     snapshotSection.print();
     simSection.print();

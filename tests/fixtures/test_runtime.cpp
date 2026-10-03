@@ -338,3 +338,27 @@ TEST_CASE("mode master switches channel functions") {
     rig.send();
     CHECK(rig.runtime.values()[4].attribute == A::Shutter1Strobe);
 }
+
+TEST_CASE("setDmx with unchanged bytes keeps the decoded state, changed bytes decode again") {
+    Rig rig(test::makeTestSpot());
+    rig.send();
+    rig.send();  // identical bytes: the decode is skipped, the result must be the same
+    const AttributeValues before = rig.runtime.values();
+
+    rig.ch(1) = 0xFF;  // pan coarse
+    rig.ch(2) = 0xFF;  // pan fine
+    rig.send();
+    CHECK(rig.runtime.values()[0].dmx != before[0].dmx);
+    const AttributeValues moved = rig.runtime.values();
+    rig.send();
+    rig.send();
+    const AttributeValues again = rig.runtime.values();
+    REQUIRE(again.size() == moved.size());
+    for (std::size_t i = 0; i < moved.size(); ++i) CHECK(again[i].dmx == moved[i].dmx);
+
+    // A shorter span reads as zeros after the span: that is a change as well.
+    rig.runtime.setDmx(std::span<const std::uint8_t>(rig.dmx).first(2));
+    CHECK(rig.runtime.values()[0].dmx == 0xFFFFu);
+    rig.runtime.setDmx(std::span<const std::uint8_t>(rig.dmx).first(1));
+    CHECK(rig.runtime.values()[0].dmx == 0xFF00u);
+}

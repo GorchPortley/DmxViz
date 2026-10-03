@@ -23,10 +23,10 @@ struct TypeShare {
     int per500;
 };
 constexpr TypeShare kShares[] = {
-    {"generic/profile-spot", "Standard", 110}, {"generic/beam-mover", "Standard", 70},
+    {"generic/profile-spot", "Standard", 110},  {"generic/beam-mover", "Standard", 70},
     {"generic/led-wash-mover", "Standard", 80}, {"generic/rgbw-par", "Extended", 50},
-    {"generic/rgb-par", "Extended", 40},       {"generic/led-strobe", "Strobe", 30},
-    {"generic/par64-dimmer", "Dimmer", 20},    {"generic/pixel-bar", "Pixel", 100},
+    {"generic/rgb-par", "Extended", 40},        {"generic/led-strobe", "Strobe", 30},
+    {"generic/par64-dimmer", "Dimmer", 20},     {"generic/pixel-bar", "Pixel", 100},
 };
 
 constexpr int kTrussLines = 10;

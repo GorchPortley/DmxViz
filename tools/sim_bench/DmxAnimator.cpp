@@ -12,9 +12,9 @@ using fixtures::Attribute;
 
 glm::vec3 hueToRgb(float hue) {
     const float h = hue - std::floor(hue);
-    return glm::clamp(glm::vec3(std::abs(h * 6.0f - 3.0f) - 1.0f, 2.0f - std::abs(h * 6.0f - 2.0f),
-                                2.0f - std::abs(h * 6.0f - 4.0f)),
-                      0.0f, 1.0f);
+    return glm::clamp(
+        glm::vec3(std::abs(h * 6.0f - 3.0f) - 1.0f, 2.0f - std::abs(h * 6.0f - 2.0f), 2.0f - std::abs(h * 6.0f - 4.0f)),
+        0.0f, 1.0f);
 }
 
 int wheelSlots(const fixtures::AttributeEncoder& encoder, Attribute attribute) {
