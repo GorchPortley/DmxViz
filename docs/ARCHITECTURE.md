@@ -336,7 +336,7 @@ Dear ImGui (docking branch) + ImGuizmo for transform gizmos. Panels:
 | Viewport(s) | 3D view, orbit/pan/fly camera, selection, gizmo, drag-drop fixtures from the library |
 | Outliner | scene tree, groups, visibility/lock, rename, reparent |
 | Inspector | properties of the selection (transform, primitive params, truss params, fixture patch) |
-| Stage builder toolbar | add primitives, truss, decks, models; array/align/hang tools |
+| Stage builder (Add and Tools menus) | add primitives, truss, decks, models; array/align/mirror/hang tools |
 | Fixture library | browse/search, import OFL/GDTF, drag into scene |
 | Fixture editor | edit/create fixture types: geometry tree, beams, wheels + gobo images, modes, channels, functions |
 | Patch | spreadsheet of fixtures: id, name, type, mode, universe.address; conflict detection; auto-patch |
@@ -348,6 +348,35 @@ Dear ImGui (docking branch) + ImGuizmo for transform gizmos. Panels:
 
 File dialogs use portable-file-dialogs. Keyboard shortcuts follow common DCC
 conventions (W/E/R gizmo modes, F frame selection, Ctrl+Z/Y, Del, Ctrl+D).
+
+### UI architecture
+
+* **`EditorContext`** (`ui/EditorContext.h`) is a bundle of references to everything a panel may
+  read or change: scene, command stack, selection, fixture library, DMX manager and snapshot,
+  assets, renderer, environment, the frame's `RenderScene`, and a pointer to the viewport camera.
+  The application owns the objects and passes the same context to every panel each frame. To give
+  panels a new subsystem, add a reference to the struct and fill it in `App::init()`.
+* **`Panel`** (`ui/Panel.h`) is the base class of dockable windows. A panel returns a unique
+  `title()` (also its dock identity) and draws its *contents* in `draw(EditorContext&)`;
+  `Panel::show()` does `Begin/End` and honours the `open` flag that the View menu toggles.
+* **Adding a panel**: (1) derive from `Panel` in `src/ui/`, one class per panel with a short header
+  comment; (2) create it in `App::createPanels()`; (3) add its title to `PanelTitles.h` and dock it
+  in `DockLayout.cpp` if it belongs in the default layout (otherwise it floats until the user docks
+  it; the layout is saved in `dmxviz_layout.ini`); (4) the View menu lists it automatically.
+* **Command rule**: every edit of the scene goes through `ctx.commands` (`CommandStack`), never
+  through the `Scene` mutators, so it is undoable and the project shows as modified. Panels use:
+  * `ui/NodeActions.h` for the shared user-level edits (delete, duplicate, group, reparent, rename,
+    add a node in front of the camera). Each builds a command, executes it and fixes the selection;
+  * `ui/EditSession.h` for property editors: widgets edit a copy of the node data, the session
+    turns the changes of a frame into one `EditNodesCommand` with a merge key, so dragging a slider
+    is one undo step (a new gesture breaks the merge);
+  * `ui/ContentEditors.h` for the per-kind inspector widgets (primitive, truss, deck, fixture...).
+* **Settings that are not scene edits** (environment, renderer quality) are changed directly
+  through the context, followed by `ctx.settingsDirty = true`. The application saves the
+  environment (including the render quality under `"quality"`) in the project file.
+* **Menus**: `drawStageMenu(ctx)` (`ui/StageMenu.h`) draws the Add and Tools menus inside the main
+  menu bar; its tools (arrays, align, mirror, hang on truss) call the `stage::tools` functions and
+  run the returned command through the stack.
 
 ---
 
