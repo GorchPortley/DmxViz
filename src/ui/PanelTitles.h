@@ -9,5 +9,9 @@ inline constexpr const char* kOutlinerTitle = "Outliner";
 inline constexpr const char* kInspectorTitle = "Inspector";
 inline constexpr const char* kDmxMonitorTitle = "DMX Monitor";
 inline constexpr const char* kLogTitle = "Log";
+inline constexpr const char* kFixtureLibraryTitle = "Fixture Library";
+inline constexpr const char* kPatchTitle = "Patch";
+inline constexpr const char* kDmxInterfacesTitle = "DMX Interfaces";
+inline constexpr const char* kTestConsoleTitle = "Test Console";
 
 }  // namespace dmxviz::ui

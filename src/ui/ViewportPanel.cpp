@@ -2,6 +2,8 @@
 
 #include "core/Log.h"
 #include "ui/EditorContext.h"
+#include "ui/FixtureDragDrop.h"
+#include "ui/FixtureSpawner.h"
 #include "ui/PanelTitles.h"
 
 #include "stage/Commands.h"
@@ -78,6 +80,7 @@ void ViewportPanel::draw(EditorContext& ctx) {
     ctx.renderer.render(target_, cam, ctx.frame, ctx.assets);
     ImGui::Image(ImTextureRef(target_.imguiTexture()), avail);
     const ViewRect rect{ImGui::GetItemRectMin(), avail};
+    handleFixtureDrop(ctx, rect, aspect);
 
     // 2. Overlays (their widgets decide below whether the mouse is "in the view").
     drawToolbar(ctx, rect);
@@ -247,14 +250,25 @@ void ViewportPanel::endGizmoDrag(EditorContext& ctx) {
 // Selection and hover
 
 NodeId ViewportPanel::pickAt(EditorContext& ctx, const ViewRect& rect, float aspect, const ImVec2& mouse) {
+    const std::optional<stage::PickHit> hit = pickHitAt(ctx, rect, aspect, mouse);
+    return hit ? hit->node : kInvalidNode;
+}
+
+std::optional<stage::PickHit> ViewportPanel::pickHitAt(EditorContext& ctx, const ViewRect& rect, float aspect,
+                                                       const ImVec2& mouse, bool floorFallback) {
     const glm::vec2 ndc((mouse.x - rect.min.x) / rect.size.x * 2.0f - 1.0f,
                         1.0f - (mouse.y - rect.min.y) / rect.size.y * 2.0f);
     const Ray ray = camera_.rayThrough(ndc, aspect);
     const auto skipLocked = [&ctx](const MeshInstance& instance) {
         return !ctx.scene.effectiveLocked(instance.pickId);
     };
-    const std::optional<stage::PickHit> hit = picker_.pick(ray, ctx.frame.meshes, ctx.assets, skipLocked);
-    return hit ? hit->node : kInvalidNode;
+    std::optional<stage::PickHit> hit = picker_.pick(ray, ctx.frame.meshes, ctx.assets, skipLocked);
+    if (!hit && floorFallback && ray.origin.y > 0.0f && ray.direction.y < -1e-4f) {
+        stage::PickHit floorHit;
+        floorHit.point = ray.origin + ray.direction * (-ray.origin.y / ray.direction.y);
+        hit = floorHit;
+    }
+    return hit;
 }
 
 void ViewportPanel::handleSelection(EditorContext& ctx, const ViewRect& rect, float aspect, bool hovered,
@@ -384,6 +398,40 @@ void ViewportPanel::frameSelection(EditorContext& ctx) {
 
 void ViewportPanel::showPreset(EditorContext& ctx, ViewportCamera::Preset preset) {
     camera_.setPreset(preset, stageBounds(ctx));
+}
+
+}  // namespace dmxviz::ui
+
+// ---------------------------------------------------------------------------
+// Fixture drag and drop
+
+namespace dmxviz::ui {
+
+void ViewportPanel::handleFixtureDrop(EditorContext& ctx, const ViewRect& rect, float aspect) {
+    if (!ImGui::BeginDragDropTarget()) return;
+    // BeforeDelivery: the payload is visible while hovering, so the target can preview the result.
+    const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(
+        kFixtureDragPayload, ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
+    if (payload != nullptr && payload->Data != nullptr) {
+        const auto* drag = static_cast<const FixtureDragPayload*>(payload->Data);
+        const ImVec2 mouse = ImGui::GetMousePos();
+        const std::optional<stage::PickHit> hit = pickHitAt(ctx, rect, aspect, mouse, true);
+
+        // Preview: a ring and a label at the pointer say what the drop will do.
+        if (hit) {
+            const stage::Node* target = ctx.scene.find(hit->node);
+            const bool onTruss = target != nullptr && target->kind() == stage::NodeKind::Truss;
+            char label[160];
+            std::snprintf(label, sizeof(label), "%s %s", onTruss ? "Hang on" : "Place on",
+                          target != nullptr ? target->name().c_str() : "the floor");
+            ImDrawList* draw = ImGui::GetWindowDrawList();
+            const ImU32 color = onTruss ? IM_COL32(255, 190, 80, 255) : IM_COL32(120, 220, 140, 255);
+            draw->AddCircle(mouse, 9.0f, color, 24, 2.0f);
+            draw->AddText(ImVec2(mouse.x + 14.0f, mouse.y + 6.0f), color, label);
+        }
+        if (payload->IsDelivery() && hit) FixtureSpawner::addAtHit(ctx, drag->typeId, drag->modeName, *hit);
+    }
+    ImGui::EndDragDropTarget();
 }
 
 }  // namespace dmxviz::ui

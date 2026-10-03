@@ -10,6 +10,8 @@
 //   transform ..... ImGuizmo gizmo on the selection; W / E / R = move / rotate / scale,
 //                   toolbar: local/world, grid snap (0.25 m, 15 deg); a drag is one undo step
 //   F ............. frame the selection (or the whole stage)
+//   drag & drop ... drop a fixture type from the Fixture Library: onto a truss it hangs there,
+//                   anywhere else it is placed on the surface under the pointer (FixtureSpawner)
 //   Delete ........ delete the selection, Ctrl+D duplicates it
 // Undo/redo (Ctrl+Z / Ctrl+Y) are global shortcuts handled by the application.
 //
@@ -23,6 +25,7 @@
 
 #include "imgui.h"
 
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -65,6 +68,13 @@ private:
 
     // Node under a screen position (kInvalidNode if none).
     NodeId pickAt(EditorContext& ctx, const ViewRect& rect, float aspect, const ImVec2& mouse);
+    // Same ray cast, with the hit point and surface normal. With `floorFallback` a ray that
+    // hits nothing lands on the y = 0 plane (a hit without node).
+    std::optional<stage::PickHit> pickHitAt(EditorContext& ctx, const ViewRect& rect, float aspect,
+                                            const ImVec2& mouse, bool floorFallback = false);
+    // Drop target for fixture types dragged from the Fixture Library. Must be called right
+    // after the viewport image is submitted (that image is the drop target's item).
+    void handleFixtureDrop(EditorContext& ctx, const ViewRect& rect, float aspect);
     // Top-level, unlocked selected nodes: the ones the gizmo moves.
     std::vector<NodeId> editableSelection(const EditorContext& ctx) const;
     Aabb stageBounds(EditorContext& ctx) const;

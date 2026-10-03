@@ -3,7 +3,7 @@
 file(GLOB_RECURSE _test_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 add_executable(dmxviz_tests ${_test_sources})
 target_link_libraries(dmxviz_tests PRIVATE dep::doctest
-    dmxviz::core dmxviz::assets dmxviz::dmx dmxviz::fixtures dmxviz::stage)
+    dmxviz::core dmxviz::assets dmxviz::dmx dmxviz::fixtures dmxviz::stage dmxviz::ui)
 target_compile_definitions(dmxviz_tests PRIVATE
     # Let doctest include <ostream>/<string> itself; MSVC does not pull them in transitively.
     DOCTEST_CONFIG_USE_STD_HEADERS
