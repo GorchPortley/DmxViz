@@ -1,5 +1,6 @@
 #include "fixtures/NativeFormat.h"
 
+#include "core/Limits.h"
 #include "core/Log.h"
 #include "fixtures/Archive.h"
 #include "fixtures/ColorMath.h"
@@ -299,6 +300,9 @@ private:
     bool readSlot(const J& j, const std::string& path, WheelSlot& s);
     bool readEmitter(const J& j, const std::string& path, Emitter& e);
     bool readGeometry(const J& j, const std::string& path, Geometry& g);
+    static constexpr int kMaxGeometries = 20000;
+    int geometryDepth_ = 0;
+    int geometryCount_ = 0;
     bool readGroup(const J& j, const std::string& path, GeometryGroup& g);
     bool readMode(const J& j, const std::string& path, DmxMode& m);
     bool readChannel(const J& j, const std::string& path, Channel& c);
@@ -480,6 +484,14 @@ bool Reader<J>::readWheel(const J& j, const std::string& path, Wheel& w) {
 template <typename J>
 bool Reader<J>::readGeometry(const J& j, const std::string& path, Geometry& g) {
     if (!requireObject(j, path)) return false;
+    // The tree is walked recursively by later stages: bound its depth and size here.
+    if (geometryDepth_ >= limits::kMaxNodeDepth) return fail(path, "geometry tree is nested too deeply");
+    if (++geometryCount_ > kMaxGeometries) return fail(path, "too many geometries");
+    struct DepthScope {
+        int& depth;
+        explicit DepthScope(int& d) : depth(d) { ++depth; }
+        ~DepthScope() { --depth; }
+    } depthScope(geometryDepth_);
     std::string type = "generic";
     glm::vec3 euler{0.0f};
     if (!readString(j, "name", path, g.name, true) || !readString(j, "type", path, type) ||
@@ -658,6 +670,10 @@ bool Reader<J>::readFunction(const J& j, const std::string& path, const Channel&
 }
 
 std::string readTextFile(const fs::path& path, std::string* error) {
+    if (limits::fileTooLarge(path)) {
+        if (error) *error = "file is too large: " + path.string();
+        return {};
+    }
     std::ifstream in(path, std::ios::binary);
     if (!in) {
         if (error) *error = "cannot open " + path.string();
@@ -772,6 +788,10 @@ std::string FixtureSerializer::toString(const FixtureType& type) { return toJson
 std::optional<FixtureType> FixtureSerializer::fromString(std::string_view text, const std::filesystem::path& baseDir,
                                                          std::string* error) {
     nlohmann::ordered_json json;
+    if (text.size() > limits::kMaxFileBytes || limits::jsonNestedTooDeeply(text)) {
+        if (error) *error = "invalid JSON: too large or nested too deeply";
+        return std::nullopt;
+    }
     try {
         json = nlohmann::ordered_json::parse(text);
     } catch (const nlohmann::json::exception& e) {

@@ -15,8 +15,9 @@ namespace {
 
 using namespace std::chrono_literals;
 
-constexpr auto kReceiveTimeout = 50ms;      // how often the IO thread checks its stop flag
-constexpr auto kForgetSequenceAfter = 10s;  // drop sequence state of senders gone this long
+constexpr auto kReceiveTimeout = 50ms;             // how often the IO thread checks its stop flag
+constexpr auto kForgetSequenceAfter = 10s;         // drop sequence state of senders gone this long
+constexpr std::size_t kMaxSequenceEntries = 8192;  // senders x universes tracked at once
 constexpr std::size_t kUniverseTableSize = sacn::kMaxUniverse + 1u;
 
 bool validUniverse(int universe) {
@@ -47,6 +48,8 @@ bool SacnInterface::start(std::string& error) {
     stop();
 
     active_ = config_;
+    active_.universeOffset =
+        std::clamp(active_.universeOffset, -config::kMaxUniverseOffset, config::kMaxUniverseOffset);
     destinationPort_ = active_.port != 0 ? active_.port : sacn::kDefaultPort;
     if (!active_.nic.isAny() && !active_.nic.isLoopback() && !findNetworkInterface(active_.nic)) {
         error = std::format("network interface {} not found", active_.nic.toString());
@@ -185,6 +188,7 @@ bool SacnInterface::acceptSequence(const sacn::Cid& cid, std::uint16_t universe,
     }
     // A new sender: tidy up first so the table cannot grow forever.
     std::erase_if(sequences_, [&](const SequenceState& s) { return now - s.lastSeen > kForgetSequenceAfter; });
+    if (sequences_.size() >= kMaxSequenceEntries) return false;  // flood of distinct CIDs: refuse, do not grow
     sequences_.push_back({cid, universe, sequence, now});
     return true;
 }
@@ -256,21 +260,21 @@ bool SacnInterface::loadConfig(const nlohmann::json& settings, std::string& erro
         SacnConfig c;
         c.cid = config_.cid;  // keep ours unless the file has one
         if (!config::readAddress(settings, "nic", c.nic, error)) return false;
-        const int port = settings.value("port", int{c.port});
-        if (port < 0 || port > 0xFFFF) {
-            error = std::format("invalid sACN port {}", port);
-            return false;
-        }
+        int port = c.port;
+        if (!config::readInt(settings, "port", 0, 0xFFFF, port, error)) return false;
         c.port = static_cast<std::uint16_t>(port);
-        c.universeOffset = settings.value("universeOffset", c.universeOffset);
+        if (!config::readInt(settings, "universeOffset", -config::kMaxUniverseOffset, config::kMaxUniverseOffset,
+                             c.universeOffset, error))
+            return false;
         if (!config::readUniverses(settings, "universes", sacn::kMinUniverse, sacn::kMaxUniverse, c.universes, error))
             return false;
         c.multicastInput = settings.value("multicastInput", c.multicastInput);
         c.acceptAllUniverses = settings.value("acceptAllUniverses", c.acceptAllUniverses);
         c.acceptPreview = settings.value("acceptPreview", c.acceptPreview);
         c.sourceName = settings.value("sourceName", c.sourceName);
-        c.priority = static_cast<std::uint8_t>(
-            std::clamp(settings.value("priority", int{c.priority}), 0, int{sacn::kMaxPriority}));
+        int priority = c.priority;
+        if (!config::readInt(settings, "priority", -1000, 1000, priority, error)) return false;
+        c.priority = static_cast<std::uint8_t>(std::clamp(priority, 0, int{sacn::kMaxPriority}));
         const std::string output = settings.value("output", std::string("multicast"));
         if (output != "multicast" && output != "unicast") {
             error = std::format("unknown sACN output mode '{}'", output);

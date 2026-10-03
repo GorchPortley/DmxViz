@@ -1,10 +1,13 @@
 #include "stage/SceneJson.h"
 
+#include "core/Limits.h"
 #include "stage/PathUtil.h"
 
+#include <algorithm>
 #include <charconv>
 #include <cmath>
 #include <format>
+#include <iterator>
 #include <limits>
 #include <stdexcept>
 #include <type_traits>
@@ -15,7 +18,7 @@ namespace {
 
 using json = nlohmann::json;
 
-constexpr int kMaxDepth = 512;
+constexpr int kMaxDepth = limits::kMaxNodeDepth;  // later stages walk the tree recursively
 
 // Thrown by the readers below and turned into an error string at the API boundary.
 struct ParseError : std::runtime_error {
@@ -25,6 +28,7 @@ struct ParseError : std::runtime_error {
 struct ReadContext {
     const JsonPathContext& paths;
     std::vector<std::string>* warnings;
+    mutable std::size_t nodeCount = 0;  // nodes read so far (limit: limits::kMaxSceneNodes)
     void warn(std::string message) const {
         if (warnings) warnings->push_back(std::move(message));
     }
@@ -367,6 +371,8 @@ const char* const kCommonKeys[] = {"id",    "kind",  "name",  "transform",      
 
 NodeSnapshot readNode(const json& j, const std::string& where, const ReadContext& ctx, int depth) {
     if (depth > kMaxDepth) throw ParseError(where + ": nodes are nested too deeply");
+    if (++ctx.nodeCount > limits::kMaxSceneNodes)
+        throw ParseError(std::format("more than {} nodes", limits::kMaxSceneNodes));
     requireObject(j, where);
     NodeSnapshot s;
     s.id = static_cast<NodeId>(readInteger(j, "id", 0, 0, std::numeric_limits<long long>::max(), where));
@@ -378,8 +384,14 @@ NodeSnapshot readNode(const json& j, const std::string& where, const ReadContext
     } else {
         UnknownContent u;
         u.kind = kindName;
-        u.data = j;
-        for (const char* key : kCommonKeys) u.data.erase(key);
+        // Copy everything except the common keys; copying "children" as well (and erasing it afterwards)
+        // would duplicate every subtree once per nesting level.
+        u.data = json::object();
+        for (auto it = j.begin(); it != j.end(); ++it) {
+            const bool common = std::any_of(std::begin(kCommonKeys), std::end(kCommonKeys),
+                                            [&](const char* key) { return it.key() == key; });
+            if (!common) u.data[it.key()] = it.value();
+        }
         s.data.content = std::move(u);
         ctx.warn(std::format("{}: unknown node kind '{}' (kept as is, not displayed)", where, kindName));
     }
@@ -535,6 +547,10 @@ std::string snapshotsToClipboardText(const std::vector<NodeSnapshot>& nodes) {
 }
 
 std::optional<std::vector<NodeSnapshot>> snapshotsFromClipboardText(std::string_view text, std::string* error) {
+    if (text.size() > limits::kMaxFileBytes || limits::jsonNestedTooDeeply(text)) {
+        if (error) *error = "the clipboard text is too large or nested too deeply";
+        return std::nullopt;
+    }
     const json j = json::parse(text, nullptr, false);
     if (j.is_discarded() || !j.is_object() || !j.contains("dmxvizClipboard") || !j.contains("nodes") ||
         !j["nodes"].is_array()) {

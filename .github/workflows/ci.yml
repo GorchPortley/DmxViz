@@ -87,3 +87,84 @@ jobs:
           name: screenshots
           path: screenshots/
           if-no-files-found: ignore
+
+  # Unit tests (including tests/robustness: mutated inputs, limits, thread stress tests) built with
+  # sanitizers. Tests only: DMXVIZ_BUILD_APP=OFF needs no display. Local equivalent:
+  #   cmake -S . -B build-asan -G Ninja -DDMXVIZ_BUILD_APP=OFF -DCMAKE_BUILD_TYPE=Debug \
+  #     -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+  #     -DCMAKE_C_FLAGS="-fsanitize=address,undefined" -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+  linux-sanitizers:
+    name: linux-sanitizers (ASan + UBSan)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build libgl-dev libx11-dev libxi-dev libxcursor-dev
+
+      # Sanitizer runtimes break with the high ASLR entropy of recent runner kernels.
+      - name: Lower ASLR entropy
+        run: sudo sysctl vm.mmap_rnd_bits=28
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: build-asan/_deps
+          key: deps-linux-asan-${{ hashFiles('cmake/Dependencies.cmake') }}
+
+      - name: Configure
+        run: >
+          cmake -S . -B build-asan -G Ninja -DDMXVIZ_BUILD_APP=OFF -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+          -DCMAKE_C_FLAGS="-fsanitize=address,undefined"
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+
+      - name: Build
+        run: cmake --build build-asan --parallel
+
+      - name: Unit tests (ASan + UBSan)
+        env:
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+          ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1
+          DMXVIZ_SLOW_TESTS: "1"
+        run: ctest --test-dir build-asan --output-on-failure --timeout 1200
+
+  # Data races between the DMX IO threads, the output thread and the main thread
+  # (tests/robustness/test_dmx_threading.cpp). DMXVIZ_STRESS_SCALE lengthens the stress tests.
+  linux-tsan:
+    name: linux-tsan (ThreadSanitizer)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build libgl-dev libx11-dev libxi-dev libxcursor-dev
+
+      - name: Lower ASLR entropy
+        run: sudo sysctl vm.mmap_rnd_bits=28
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: build-tsan/_deps
+          key: deps-linux-tsan-${{ hashFiles('cmake/Dependencies.cmake') }}
+
+      - name: Configure
+        run: >
+          cmake -S . -B build-tsan -G Ninja -DDMXVIZ_BUILD_APP=OFF -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_FLAGS="-fsanitize=thread"
+          -DCMAKE_C_FLAGS="-fsanitize=thread"
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=thread"
+
+      - name: Build
+        run: cmake --build build-tsan --parallel
+
+      - name: Unit tests (ThreadSanitizer)
+        env:
+          TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1
+          DMXVIZ_STRESS_SCALE: "3"
+        run: ctest --test-dir build-tsan --output-on-failure --timeout 1200

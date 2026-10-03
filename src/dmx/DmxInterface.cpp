@@ -62,7 +62,7 @@ void DmxInterface::submitInput(UniverseId universe, const SourceDescriptor& sour
                                std::span<const std::uint8_t> slots) {
     countIn();
     if (!store_ || !inputEnabled_.load(std::memory_order_relaxed)) return;
-    store_->submit(universe, source, slots);
+    if (!store_->submit(universe, source, slots)) countInvalid();  // source limit reached (flood)
 }
 
 void DmxInterface::removeInput(UniverseId universe, const SourceId& source) {

@@ -67,7 +67,7 @@ void writeVersion(std::span<std::uint8_t> out) {
 void writeText(std::uint8_t* field, std::size_t fieldSize, std::string_view text) {
     std::memset(field, 0, fieldSize);
     const std::size_t n = std::min(text.size(), fieldSize - 1);
-    std::memcpy(field, text.data(), n);
+    std::copy_n(text.begin(), n, field);  // not memcpy: an empty view may hold a null pointer
 }
 
 std::string readText(const std::uint8_t* field, std::size_t fieldSize) {

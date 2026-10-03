@@ -104,7 +104,8 @@ add_library(dep_miniz STATIC
 target_include_directories(dep_miniz SYSTEM PUBLIC "${miniz_SOURCE_DIR}" "${_tp}/miniz")
 add_library(dep::miniz ALIAS dep_miniz)
 
-if(DMXVIZ_BUILD_APP)
+# The tests link the ui module (and so render, sokol and imgui) even when the app executable is off.
+if(DMXVIZ_BUILD_APP OR DMXVIZ_BUILD_TESTS)
     add_library(dep_imgui STATIC
         "${imgui_SOURCE_DIR}/imgui.cpp"
         "${imgui_SOURCE_DIR}/imgui_demo.cpp"

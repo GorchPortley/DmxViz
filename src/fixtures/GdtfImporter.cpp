@@ -1091,7 +1091,9 @@ std::optional<ChannelTemplate> GdtfImport::readChannel(const pugi::xml_node& nod
         return std::nullopt;
     }
 
-    for (std::string_view part : splitList(attr(node, "Offset"), ','))
+    // splitList returns views, so the text must outlive the loop (a temporary would dangle).
+    const std::string offsetText = attr(node, "Offset");
+    for (std::string_view part : splitList(offsetText, ','))
         if (auto v = parseNumber(part); v && *v >= 1.0 && *v <= 512.0)
             t.offsets.push_back(static_cast<std::uint16_t>(*v));
     if (t.offsets.size() > 3) {

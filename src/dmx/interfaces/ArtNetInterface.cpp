@@ -32,6 +32,8 @@ bool ArtNetInterface::start(std::string& error) {
     stop();  // clean up after a previous error
 
     active_ = config_;
+    active_.universeOffset =
+        std::clamp(active_.universeOffset, -config::kMaxUniverseOffset, config::kMaxUniverseOffset);
     localInterfaces_ = listNetworkInterfaces();
     nic_.reset();
     if (!active_.nic.isAny()) {
@@ -266,13 +268,12 @@ bool ArtNetInterface::loadConfig(const nlohmann::json& settings, std::string& er
     try {
         ArtNetConfig c;
         if (!config::readAddress(settings, "nic", c.nic, error)) return false;
-        const int port = settings.value("port", int{c.port});
-        if (port < 0 || port > 0xFFFF) {
-            error = std::format("invalid Art-Net port {}", port);
-            return false;
-        }
+        int port = c.port;
+        if (!config::readInt(settings, "port", 0, 0xFFFF, port, error)) return false;
         c.port = static_cast<std::uint16_t>(port);
-        c.universeOffset = settings.value("universeOffset", c.universeOffset);
+        if (!config::readInt(settings, "universeOffset", -config::kMaxUniverseOffset, config::kMaxUniverseOffset,
+                             c.universeOffset, error))
+            return false;
         const std::string output = settings.value("output", std::string("broadcast"));
         if (output != "broadcast" && output != "unicast") {
             error = std::format("unknown Art-Net output mode '{}'", output);

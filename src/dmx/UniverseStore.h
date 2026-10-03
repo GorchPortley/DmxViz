@@ -65,10 +65,16 @@ struct SourceDescriptor {
 
 class UniverseStore {
 public:
+    // Memory/CPU bounds against floods of spoofed senders (every distinct IP:port or sACN CID is
+    // a source). The programmer is exempt from the per-universe limit.
+    static constexpr std::size_t kMaxSourcesPerUniverse = 64;
+    static constexpr std::size_t kMaxSources = 4096;
+
     // ---- input (any thread) ---------------------------------------------------------
     // Stores the latest frame of a source. `slots` may be shorter than 512 (the rest is
-    // treated as zero); extra slots are ignored. Universe 0 is ignored.
-    void submit(UniverseId universe, const SourceDescriptor& source, std::span<const std::uint8_t> slots,
+    // treated as zero); extra slots are ignored. Universe 0 is ignored. Returns false when
+    // the frame was dropped because a source limit above was reached.
+    bool submit(UniverseId universe, const SourceDescriptor& source, std::span<const std::uint8_t> slots,
                 TimePoint now = Clock::now());
     // The source leaves now (sACN stream-terminated).
     void removeSource(UniverseId universe, const SourceId& id);
@@ -132,6 +138,14 @@ private:
 
     Source* findSource(Slot& slot, const SourceId& id);
     Source& programmerSource(UniverseId universe);
+    // All removals go through here so sourceCount_ stays exact.
+    template <typename Predicate>
+    std::size_t eraseSourcesIf(Slot& slot, Predicate predicate) {
+        const std::size_t removed = std::erase_if(slot.sources, predicate);
+        sourceCount_ -= removed;
+        return removed;
+    }
+    bool makeRoomForSource(Slot& slot, TimePoint now);
     void expireLocked(Slot& slot, TimePoint now);
     void mergeIfDirty(Slot& slot);
     static bool mergeSources(const std::vector<Source>& sources, InterfaceId excluded, UniverseData& out);
@@ -139,6 +153,8 @@ private:
 
     mutable std::mutex mutex_;
     std::map<UniverseId, Slot> slots_;
+    std::size_t sourceCount_ = 0;  // sources in all slots
+    TimePoint lastSweep_{};        // last full expiry pass made to free source slots
     std::chrono::milliseconds timeout_ = kDefaultSourceTimeout;
     bool holdLastLook_ = true;
     ProgrammerMode programmerMode_ = ProgrammerMode::Merge;

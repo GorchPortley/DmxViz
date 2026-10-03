@@ -28,18 +28,20 @@ SourceId SourceId::fromCid(InterfaceId interfaceId, const std::array<std::uint8_
 
 // ---- input ------------------------------------------------------------------------------
 
-void UniverseStore::submit(UniverseId universe, const SourceDescriptor& desc, std::span<const std::uint8_t> slots,
+bool UniverseStore::submit(UniverseId universe, const SourceDescriptor& desc, std::span<const std::uint8_t> slots,
                            TimePoint now) {
-    if (universe == kInvalidUniverse) return;
+    if (universe == kInvalidUniverse) return false;
     std::lock_guard lock(mutex_);
     Slot& slot = slots_[universe];  // allocates only the first time a universe appears
 
     // Fresh data ends "hold last look": drop the timed-out sources that were kept for it.
-    std::erase_if(slot.sources, [](const Source& s) { return s.held; });
+    eraseSourcesIf(slot, [](const Source& s) { return s.held; });
 
     Source* source = findSource(slot, desc.id);
     if (!source) {
+        if (!makeRoomForSource(slot, now)) return false;
         source = &slot.sources.emplace_back();
+        ++sourceCount_;
         source->id = desc.id;
     }
     source->protocol = desc.protocol;
@@ -57,20 +59,42 @@ void UniverseStore::submit(UniverseId universe, const SourceDescriptor& desc, st
     slot.lastUpdate = now;
     slot.dirty = true;
     expireLocked(slot, now);  // other senders of this universe may have gone quiet
+    return true;
+}
+
+// A new network source needs a free place under both limits. Quiet sources are expired first, then
+// "held" ones (kept only to hold a last look) are given up; if that is not enough the frame is dropped.
+bool UniverseStore::makeRoomForSource(Slot& slot, TimePoint now) {
+    if (slot.sources.size() >= kMaxSourcesPerUniverse) {
+        expireLocked(slot, now);
+        eraseSourcesIf(slot, [](const Source& s) { return s.held; });
+        if (slot.sources.size() >= kMaxSourcesPerUniverse) return false;
+    }
+    if (sourceCount_ < kMaxSources) return true;
+
+    // At most one full sweep per second, so a flood cannot make every packet scan all universes.
+    if (now - lastSweep_ >= std::chrono::seconds(1)) {
+        lastSweep_ = now;
+        for (auto& entry : slots_) {
+            expireLocked(entry.second, now);
+            if (&entry.second != &slot) eraseSourcesIf(entry.second, [](const Source& s) { return s.held; });
+        }
+    }
+    return sourceCount_ < kMaxSources;
 }
 
 void UniverseStore::removeSource(UniverseId universe, const SourceId& id) {
     std::lock_guard lock(mutex_);
     const auto it = slots_.find(universe);
     if (it == slots_.end()) return;
-    if (std::erase_if(it->second.sources, [&](const Source& s) { return s.id == id; }) > 0) it->second.dirty = true;
+    if (eraseSourcesIf(it->second, [&](const Source& s) { return s.id == id; }) > 0) it->second.dirty = true;
 }
 
 void UniverseStore::removeInterfaceSources(InterfaceId interfaceId) {
     std::lock_guard lock(mutex_);
     for (auto& entry : slots_) {
         Slot& slot = entry.second;
-        if (std::erase_if(slot.sources, [&](const Source& s) { return s.id.interfaceId == interfaceId; }) > 0)
+        if (eraseSourcesIf(slot, [&](const Source& s) { return s.id.interfaceId == interfaceId; }) > 0)
             slot.dirty = true;
     }
 }
@@ -78,6 +102,7 @@ void UniverseStore::removeInterfaceSources(InterfaceId interfaceId) {
 void UniverseStore::clear() {
     std::lock_guard lock(mutex_);
     slots_.clear();
+    sourceCount_ = 0;
 }
 
 // ---- programmer -------------------------------------------------------------------------
@@ -90,6 +115,7 @@ UniverseStore::Source& UniverseStore::programmerSource(UniverseId universe) {
     Slot& slot = slots_[universe];
     if (Source* existing = findSource(slot, kProgrammerSourceId)) return *existing;
     Source& source = slot.sources.emplace_back();
+    ++sourceCount_;
     source.id = kProgrammerSourceId;
     source.protocol = Protocol::Programmer;
     source.priority = programmerPriority();
@@ -135,8 +161,7 @@ void UniverseStore::clearProgrammer() {
     std::lock_guard lock(mutex_);
     for (auto& entry : slots_) {
         Slot& slot = entry.second;
-        if (std::erase_if(slot.sources, [](const Source& s) { return s.id == kProgrammerSourceId; }) > 0)
-            slot.dirty = true;
+        if (eraseSourcesIf(slot, [](const Source& s) { return s.id == kProgrammerSourceId; }) > 0) slot.dirty = true;
     }
 }
 
@@ -240,7 +265,7 @@ void UniverseStore::setHoldLastLook(bool hold) {
     // Turning hold off releases whatever is currently being held.
     for (auto& entry : slots_) {
         Slot& slot = entry.second;
-        if (std::erase_if(slot.sources, [](const Source& s) { return s.held; }) > 0) slot.dirty = true;
+        if (eraseSourcesIf(slot, [](const Source& s) { return s.held; }) > 0) slot.dirty = true;
     }
 }
 
@@ -270,7 +295,7 @@ void UniverseStore::expireLocked(Slot& slot, TimePoint now) {
         for (Source& s : slot.sources)
             if (timedOut(s)) s.held = true;
     } else {
-        std::erase_if(slot.sources, timedOut);
+        eraseSourcesIf(slot, timedOut);
     }
     slot.dirty = true;
 }

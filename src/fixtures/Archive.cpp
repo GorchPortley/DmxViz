@@ -1,5 +1,7 @@
 #include "fixtures/Archive.h"
 
+#include "core/Limits.h"
+
 #include <miniz.h>
 
 #include <algorithm>
@@ -35,6 +37,12 @@ bool ZipReader::open(std::vector<std::uint8_t> bytes, std::string* error) {
     }
     impl_->open = true;
     const mz_uint count = mz_zip_reader_get_num_files(&impl_->zip);
+    if (count > limits::kMaxArchiveEntries) {
+        mz_zip_reader_end(&impl_->zip);
+        impl_->open = false;
+        if (error) *error = "zip archive has too many entries";
+        return false;
+    }
     for (mz_uint i = 0; i < count; ++i) {
         if (mz_zip_reader_is_file_a_directory(&impl_->zip, i)) continue;
         mz_zip_archive_file_stat stat{};
@@ -71,6 +79,11 @@ std::optional<std::vector<std::uint8_t>> ZipReader::read(std::string_view name) 
     const std::string key(name);
     const int index = mz_zip_reader_locate_file(&impl_->zip, key.c_str(), nullptr, 0);
     if (index < 0) return std::nullopt;
+    // The declared size is checked before extracting: miniz allocates it up front (zip bombs).
+    mz_zip_archive_file_stat stat{};
+    if (!mz_zip_reader_file_stat(&impl_->zip, static_cast<mz_uint>(index), &stat) ||
+        stat.m_uncomp_size > limits::kMaxArchiveEntryBytes)
+        return std::nullopt;
     std::size_t size = 0;
     void* data = mz_zip_reader_extract_to_heap(&impl_->zip, static_cast<mz_uint>(index), &size, 0);
     if (!data) return std::nullopt;
@@ -104,8 +117,9 @@ std::vector<std::uint8_t> ZipWriter::finish() const {
     if (mz_zip_writer_finalize_heap_archive(&zip, &buffer, &size)) {
         const auto* bytes = static_cast<const std::uint8_t*>(buffer);
         out.assign(bytes, bytes + size);
+        mz_free(buffer);  // finalize_heap_archive hands the buffer over to the caller
     }
-    mz_zip_writer_end(&zip);  // frees the heap buffer
+    mz_zip_writer_end(&zip);
     return out;
 }
 
@@ -170,6 +184,12 @@ std::optional<std::vector<std::uint8_t>> base64Decode(std::string_view text) {
 }
 
 std::optional<std::vector<std::uint8_t>> readFileBytes(const std::filesystem::path& path, std::string* error) {
+    std::error_code sizeError;
+    const std::uintmax_t size = std::filesystem::file_size(path, sizeError);
+    if (!sizeError && size > limits::kMaxArchiveBytes) {
+        if (error) *error = "file is too large: " + path.string();
+        return std::nullopt;
+    }
     std::ifstream in(path, std::ios::binary);
     if (!in) {
         if (error) *error = "cannot open " + path.string();

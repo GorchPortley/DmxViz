@@ -1,5 +1,6 @@
 #include "fixtures/FixtureLibrary.h"
 
+#include "core/Limits.h"
 #include "core/Log.h"
 #include "fixtures/Archive.h"
 #include "fixtures/GdtfImporter.h"
@@ -63,8 +64,12 @@ std::optional<FixtureType> FixtureLibrary::loadAny(const fs::path& file, bool* n
                 if (error) *error = readError;
                 return std::nullopt;
             }
-            // parse() without exceptions: a damaged file yields a discarded value.
-            const auto json = nlohmann::ordered_json::parse(bytes->begin(), bytes->end(), nullptr, false);
+            // parse() without exceptions: a damaged file yields a discarded value. Huge or deeply
+            // nested files are treated like damaged ones.
+            const std::string_view text(reinterpret_cast<const char*>(bytes->data()), bytes->size());
+            const auto json = bytes->size() > limits::kMaxFileBytes || limits::jsonNestedTooDeeply(text)
+                                  ? nlohmann::ordered_json(nlohmann::ordered_json::value_t::discarded)
+                                  : nlohmann::ordered_json::parse(text, nullptr, false);
             if (json.is_discarded()) {
                 if (error) *error = file.filename().string() + ": invalid JSON";
                 return std::nullopt;
