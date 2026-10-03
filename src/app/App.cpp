@@ -20,6 +20,7 @@
 #include "stage/ProjectFile.h"
 #include "ui/DockLayout.h"
 #include "ui/LogPanel.h"
+#include "ui/OutlinerPanel.h"
 #include "ui/PanelTitles.h"
 #include "ui/PlaceholderPanel.h"
 #include "ui/Theme.h"
@@ -195,9 +196,11 @@ void App::createPanels() {
     viewport_ = viewport.get();
     panels_.push_back(std::move(viewport));
 
-    // Placeholders: replace each by its real panel (same title) when it exists.
-    panels_.push_back(std::make_unique<ui::PlaceholderPanel>(ui::kOutlinerTitle));
+    context_->viewportCamera = &viewport_->camera();
+
+    panels_.push_back(std::make_unique<ui::OutlinerPanel>());
     panels_.push_back(std::make_unique<ui::PlaceholderPanel>(ui::kInspectorTitle));
+    // Placeholders: replace each by its real panel (same title) when it exists.
     panels_.push_back(std::make_unique<ui::PlaceholderPanel>(ui::kDmxMonitorTitle));
     panels_.push_back(std::make_unique<ui::LogPanel>());
 }
