@@ -7,6 +7,7 @@ namespace dmxviz::ui {
 inline constexpr const char* kViewportTitle = "Viewport";
 inline constexpr const char* kOutlinerTitle = "Outliner";
 inline constexpr const char* kInspectorTitle = "Inspector";
+inline constexpr const char* kEnvironmentTitle = "Environment";
 inline constexpr const char* kDmxMonitorTitle = "DMX Monitor";
 inline constexpr const char* kLogTitle = "Log";
 

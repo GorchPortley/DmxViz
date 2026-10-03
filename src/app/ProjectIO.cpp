@@ -57,6 +57,41 @@ render::Environment environmentFromJson(const json& j) {
     return e;
 }
 
+json qualityToJson(const render::RenderSettings& q) {
+    json j = json::object();
+    j["volumetrics"] = q.volumetrics;
+    j["minMarchSteps"] = q.minMarchSteps;
+    j["maxMarchSteps"] = q.maxMarchSteps;
+    j["marchPixelsPerStep"] = q.marchPixelsPerStep;
+    j["hazePhaseG"] = q.hazePhaseG;
+    j["clipBeamsAtFloor"] = q.clipBeamsAtFloor;
+    j["lensGlow"] = q.lensGlow;
+    j["bloom"] = q.bloom;
+    j["tonemapper"] = static_cast<int>(q.tonemapper);
+    return j;
+}
+
+// Applies the "quality" object of the environment block on top of `q`; missing fields keep their value.
+void applyQualityFromJson(const json& environment, render::RenderSettings& q) {
+    if (!environment.is_object() || !environment.contains("quality") || !environment["quality"].is_object()) return;
+    const json& j = environment["quality"];
+    try {
+        q.volumetrics = j.value("volumetrics", q.volumetrics);
+        q.minMarchSteps = j.value("minMarchSteps", q.minMarchSteps);
+        q.maxMarchSteps = j.value("maxMarchSteps", q.maxMarchSteps);
+        q.marchPixelsPerStep = j.value("marchPixelsPerStep", q.marchPixelsPerStep);
+        q.hazePhaseG = j.value("hazePhaseG", q.hazePhaseG);
+        q.clipBeamsAtFloor = j.value("clipBeamsAtFloor", q.clipBeamsAtFloor);
+        q.lensGlow = j.value("lensGlow", q.lensGlow);
+        q.bloom = j.value("bloom", q.bloom);
+        const int tonemapper = j.value("tonemapper", static_cast<int>(q.tonemapper));
+        if (tonemapper >= 0 && tonemapper <= static_cast<int>(render::Tonemapper::AcesPerChannel))
+            q.tonemapper = static_cast<render::Tonemapper>(tonemapper);
+    } catch (const json::exception& ex) {
+        log::warn("app", "quality settings in the project are damaged ({}), keeping the current ones", ex.what());
+    }
+}
+
 bool isInside(const std::filesystem::path& file, const std::filesystem::path& dir) {
     if (dir.empty()) return false;
     std::error_code ec;
@@ -93,6 +128,7 @@ bool saveProjectTo(const ProjectParts& parts, const std::filesystem::path& file,
     stage::Project project;
     project.scene = std::move(parts.scene);
     project.environment = environmentToJson(parts.environment);
+    if (parts.renderSettings != nullptr) project.environment["quality"] = qualityToJson(*parts.renderSettings);
     project.dmx = parts.dmx.saveConfig();
     project.fixtureTypes = usedFixtureTypes(project.scene, parts.fixtures, parts.bundledFixtureDir);
     const bool ok = stage::saveProject(project, file, &error);
@@ -116,6 +152,7 @@ bool loadProjectFrom(const ProjectParts& parts, const std::filesystem::path& fil
 
     parts.scene = std::move(project->scene);
     parts.environment = environmentFromJson(project->environment);
+    if (parts.renderSettings != nullptr) applyQualityFromJson(project->environment, *parts.renderSettings);
     if (!project->dmx.empty()) {
         std::string dmxError;
         if (parts.dmx.loadConfig(project->dmx, dmxError)) {

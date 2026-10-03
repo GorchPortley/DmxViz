@@ -30,6 +30,7 @@ void ensureDefaultDockLayout(unsigned int dockspaceId, bool force) {
 
     ImGui::DockBuilderDockWindow(kOutlinerTitle, left);
     ImGui::DockBuilderDockWindow(kInspectorTitle, right);
+    ImGui::DockBuilderDockWindow(kEnvironmentTitle, right);  // tab next to the Inspector
     ImGui::DockBuilderDockWindow(kDmxMonitorTitle, bottom);
     ImGui::DockBuilderDockWindow(kLogTitle, bottom);
     ImGui::DockBuilderDockWindow(kViewportTitle, rest);

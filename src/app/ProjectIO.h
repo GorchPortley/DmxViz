@@ -8,6 +8,7 @@
 #include "dmx/DmxManager.h"
 #include "fixtures/FixtureLibrary.h"
 #include "render/RenderScene.h"
+#include "render/RenderSettings.h"
 #include "stage/Scene.h"
 
 #include <filesystem>
@@ -22,6 +23,8 @@ struct ProjectParts {
     dmx::DmxManager& dmx;
     fixtures::FixtureLibrary& fixtures;
     std::filesystem::path bundledFixtureDir;  // fixture types below this folder are not written into the project
+    // Renderer quality settings, saved in the environment block under "quality". Optional.
+    render::RenderSettings* renderSettings = nullptr;
 };
 
 // Writes the project atomically. Returns false and sets `error` on failure.
