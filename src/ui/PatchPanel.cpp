@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cfloat>
+#include <compare>
 #include <cstdio>
 #include <cstring>
 #include <functional>
@@ -139,18 +140,30 @@ void PatchPanel::drawToolbar(EditorContext& ctx) {
     else
         ImGui::TextDisabled("no address conflicts");
 
-    ImGui::SameLine(0.0f, 24.0f);
-    ImGui::SetNextItemWidth(60.0f);
-    ImGui::InputInt("Universe", &startUniverse_, 0, 0);
-    startUniverse_ = std::clamp(startUniverse_, 1, static_cast<int>(kMaxUniverse));
+    // The auto-patch controls follow on the same line when there is room, otherwise they wrap.
+    const auto sameLineIfRoom = [](float width) {
+        if (ImGui::GetContentRegionAvail().x >= width) ImGui::SameLine(0.0f, 20.0f);
+    };
+    sameLineIfRoom(250.0f);
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted("Start");
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(60.0f);
-    ImGui::InputInt("Address", &startAddress_, 0, 0);
+    ImGui::SetNextItemWidth(52.0f);
+    ImGui::InputInt("##startUniverse", &startUniverse_, 0, 0);
+    ImGui::SetItemTooltip("First universe for auto-patch");
+    startUniverse_ = std::clamp(startUniverse_, 1, static_cast<int>(kMaxUniverse));
+    ImGui::SameLine(0.0f, 4.0f);
+    ImGui::TextUnformatted(".");
+    ImGui::SameLine(0.0f, 4.0f);
+    ImGui::SetNextItemWidth(52.0f);
+    ImGui::InputInt("##startAddress", &startAddress_, 0, 0);
+    ImGui::SetItemTooltip("First address for auto-patch");
     startAddress_ = std::clamp(startAddress_, 1, kDmxSlots);
     ImGui::SameLine();
     ImGui::Checkbox("Skip used", &avoidOthers_);
     ImGui::SetItemTooltip("Leave out addresses that other (unselected) fixtures already use");
-    ImGui::SameLine();
+
+    sameLineIfRoom(270.0f);
     ImGui::BeginDisabled(ctx.selection.empty());
     if (ImGui::Button("Auto-patch selected")) autoPatchSelected(ctx);
     ImGui::SetItemTooltip("Give the selected fixtures consecutive addresses from the start address,\n"
@@ -202,7 +215,7 @@ void PatchPanel::drawTable(EditorContext& ctx) {
             ImGui::PopID();
         }
     }
-    if (primaryIndex >= 0 || rows_.empty()) scrollToPrimary_ = false;
+    scrollToPrimary_ = false;  // one attempt per selection change
     ImGui::EndTable();
 }
 

@@ -17,10 +17,11 @@ using fixtures::AttributeFamily;
 namespace {
 
 constexpr float kSectionHeight = 172.0f;
+constexpr float kWheelSectionHeight = 250.0f;  // a row of slot buttons per wheel
 constexpr float kPadSize = 108.0f;
 constexpr float kSlotButtonWidth = 24.0f;
 constexpr int kRawChannelsPerPage = 32;
-constexpr int kRawPageCount = dmx::kUniverseSize / kRawChannelsPerPage;
+constexpr int kRawPageCount = static_cast<int>(dmx::kUniverseSize) / kRawChannelsPerPage;
 
 enum class Section { Skip, Intensity, Colour, Position, Beam, Wheels, Shutter, Other };
 
@@ -241,7 +242,10 @@ void TestConsolePanel::drawToolbar(EditorContext& ctx) {
     ImGui::EndDisabled();
     ImGui::SameLine();
     ImGui::BeginDisabled(session_->model().empty());
-    if (ImGui::Button("Clear all")) session_->clearAll();
+    if (ImGui::Button("Clear all")) {
+        session_->clearAll();
+        selected_.clear();  // the fixtures it pointed to are gone
+    }
     ImGui::SetItemTooltip("Release everything the console holds");
     ImGui::EndDisabled();
 
@@ -252,10 +256,10 @@ void TestConsolePanel::drawToolbar(EditorContext& ctx) {
 // ---------------------------------------------------------------------------
 // Attributes tab
 
-bool TestConsolePanel::beginSection(const char* name, float width) {
+bool TestConsolePanel::beginSection(const char* name, float width, float height) {
     if (sectionsDrawn_ > 0 && lastSectionRight_ + ImGui::GetStyle().ItemSpacing.x + width <= sectionRightEdge_)
         ImGui::SameLine();
-    return ImGui::BeginChild(name, ImVec2(width, kSectionHeight), ImGuiChildFlags_Borders);
+    return ImGui::BeginChild(name, ImVec2(width, height), ImGuiChildFlags_Borders);
 }
 
 void TestConsolePanel::endSection() {
@@ -276,7 +280,7 @@ void TestConsolePanel::drawAttributes(EditorContext& ctx) {
     for (const ConsoleFixture* fixture : selected_) unpatched += fixture->patched() ? 0 : 1;
     ImGui::TextUnformatted(primary.type().displayName().c_str());
     ImGui::SameLine();
-    ImGui::TextDisabled("%s, %d ch @ %u.%u%s", primary.mode().name.c_str(), primary.footprint(),
+    ImGui::TextDisabled("%s, %d ch, universe %u address %u%s", primary.mode().name.c_str(), primary.footprint(),
                         static_cast<unsigned>(primary.patch().universe), static_cast<unsigned>(primary.patch().address),
                         selected_.size() > 1 ? "  (controls apply to all selected fixtures)" : "");
     if (unpatched > 0) {
@@ -438,7 +442,7 @@ void TestConsolePanel::drawBeam(const ConsoleFixture& primary) {
 }
 
 void TestConsolePanel::drawWheels(const ConsoleFixture& primary) {
-    if (!beginSection("Wheels", 390.0f)) {
+    if (!beginSection("Wheels", 390.0f, kWheelSectionHeight)) {
         endSection();
         return;
     }

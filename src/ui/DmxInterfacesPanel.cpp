@@ -21,7 +21,7 @@ namespace dmxviz::ui {
 namespace {
 
 constexpr int kMaxUniverseOffset = 32768;
-constexpr int kLabelWidth = 150;  // pixels reserved for field labels before the widgets
+constexpr int kLabelWidth = 140;  // pixels reserved for field labels before the widgets
 
 const ImVec4 kRunningColor(0.45f, 0.85f, 0.45f, 1.0f);
 const ImVec4 kStoppedColor(0.60f, 0.60f, 0.64f, 1.0f);
@@ -65,9 +65,10 @@ bool textField(const char* label, char* text, std::size_t size, bool valid, cons
 
 // Writes "label" then lets the next widget start at a fixed column.
 void fieldLabel(const char* text) {
+    const float start = ImGui::GetCursorPosX();  // includes the indent of the surrounding tree nodes
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted(text);
-    ImGui::SameLine(static_cast<float>(kLabelWidth));
+    ImGui::SameLine(start + static_cast<float>(kLabelWidth));
 }
 
 std::vector<dmx::UniverseId> routedUniverses(const dmx::DmxManager& manager, dmx::InterfaceId id) {

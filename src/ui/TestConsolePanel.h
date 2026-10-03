@@ -44,7 +44,7 @@ private:
     void drawOther(const ConsoleFixture& primary);
 
     // Places sections side by side and wraps them when the window is too narrow.
-    bool beginSection(const char* name, float width);
+    bool beginSection(const char* name, float width, float height = 172.0f);
     void endSection();
 
     // Selected fixtures, primary first.
