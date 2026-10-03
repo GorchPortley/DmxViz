@@ -128,8 +128,11 @@ void WheelMotion::update(float dt, float slotsPerSecond) {
 }
 
 int WheelMotion::visibleSlot() const {
-    int slot = static_cast<int>(std::floor(position_ + 0.5f));
-    return slot >= count_ ? 0 : slot;
+    // A target outside the wheel (from a damaged fixture file) must not become a negative or huge
+    // slot index: callers use it to index the wheel's slot list.
+    const float slot = std::floor(position_ + 0.5f);
+    if (!(slot >= 0.0f && slot < static_cast<float>(count_))) return 0;  // also rejects NaN
+    return static_cast<int>(slot);
 }
 
 // -------------------------------------------------------------- RotationMotion
