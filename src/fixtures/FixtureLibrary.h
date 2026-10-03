@@ -23,6 +23,7 @@
 #include "fixtures/OflImporter.h"
 
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <map>
 #include <memory>
@@ -58,6 +59,8 @@ public:
     // or id, in the order of all(). Empty text returns everything.
     std::vector<const FixtureType*> search(std::string_view text) const;
     std::size_t size() const { return entries_.size(); }
+    // Increases whenever a type is added or replaced, so users of the library can resync.
+    std::uint64_t revision() const { return revision_; }
 
     // Adds a type made in memory (fixture editor) or replaces the one with the same id.
     // An empty id is generated from manufacturer and name. Returns false (and sets `error`)
@@ -90,6 +93,7 @@ private:
     std::map<std::string, std::size_t, std::less<>> index_;  // id -> entries_ index
     std::vector<std::unique_ptr<FixtureType>> retired_;      // replaced types, kept alive
     std::vector<LoadError> errors_;
+    std::uint64_t revision_ = 0;
     OflImportOptions oflOptions_;
 };
 

@@ -102,6 +102,7 @@ std::string FixtureLibrary::insert(FixtureType type, const fs::path& source, boo
         index_.emplace(id, entries_.size());
         entries_.push_back({std::move(replacement), source});
     }
+    ++revision_;
     return id;
 }
 

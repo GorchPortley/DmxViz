@@ -28,7 +28,7 @@ void Simulation::update(const stage::Scene& scene, const dmx::DmxSnapshot& dmx, 
     dt = std::clamp(dt, 0.0f, 0.1f);
 
     // Fixture list: only when the scene (or the set of known fixture types) changed.
-    if (syncedScene_ != &scene || syncedRevision_ != scene.revision() || syncedLibrarySize_ != library_.size())
+    if (syncedScene_ != &scene || syncedRevision_ != scene.revision() || syncedLibraryRevision_ != library_.revision())
         syncFixtures(scene);
 
     out.meshes.clear();
@@ -65,7 +65,7 @@ void Simulation::update(const stage::Scene& scene, const dmx::DmxSnapshot& dmx, 
 void Simulation::syncFixtures(const stage::Scene& scene) {
     syncedScene_ = &scene;
     syncedRevision_ = scene.revision();
-    syncedLibrarySize_ = library_.size();
+    syncedLibraryRevision_ = library_.revision();
     ++syncStamp_;
 
     order_.clear();

@@ -86,7 +86,7 @@ private:
     // Change detection for the caches.
     const stage::Scene* syncedScene_ = nullptr;
     std::uint64_t syncedRevision_ = 0;
-    std::size_t syncedLibrarySize_ = 0;
+    std::uint64_t syncedLibraryRevision_ = 0;
     std::uint64_t staticRevision_ = 0;
     std::uint64_t staticSelectionRevision_ = 0;
     bool staticValid_ = false;
