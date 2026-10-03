@@ -307,12 +307,13 @@ TEST_CASE("GDTF import: prism facets become angular offsets") {
     CHECK(prism.kind == SlotKind::Prism);
     REQUIRE(prism.facets.size() == 3);
 
-    // Each facet is tilted 5 degrees away from the axis; the offsets are along DmxViz X and Z.
+    // Each facet is tilted 5 degrees away from the axis. Facet offsets are x = right, y = up when looking
+    // along the beam; right is local -X, so the facet tilted towards GDTF/DmxViz -X has a positive x.
     const float five = degToRad(5.0f);
     for (const glm::vec2& f : prism.facets) CHECK(glm::length(f) == Approx(five).epsilon(0.002));
     CHECK(prism.facets[0].x == Approx(0.0f).scale(1.0).epsilon(1e-4));
     CHECK(prism.facets[0].y == Approx(-five).epsilon(0.002));
-    CHECK(prism.facets[1].x == Approx(-five).epsilon(0.002));
+    CHECK(prism.facets[1].x == Approx(five).epsilon(0.002));
     CHECK(prism.facets[1].y == Approx(0.0f).scale(1.0).epsilon(1e-4));
     CHECK(prism.facets[2].y == Approx(five).epsilon(0.002));
 
@@ -403,6 +404,46 @@ TEST_CASE("GDTF import: imported moving head runs in the fixture runtime") {
     runtime.setDmx(dmx);
     for (int i = 0; i < 300; ++i) runtime.update(0.01f, 0.1 + i * 0.01);
     CHECK(std::abs(radToDeg(runtime.panAngle())) == Approx(270.0f).epsilon(0.01));
+}
+
+TEST_CASE("GDTF import: emitted prism facets follow cross(direction, up)") {
+    auto type = std::make_shared<const FixtureType>(importXml(movingHeadXml()));
+    FixtureRuntime runtime(type, "Standard");
+    std::vector<std::uint8_t> dmx(13, 0);
+    dmx[0] = 0x80;  // pan centre
+    dmx[2] = 0x80;  // tilt centre
+    dmx[4] = 255;   // dimmer
+    dmx[7] = 200;   // prism in (3-facet)
+    dmx[9] = 32;    // shutter open
+    runtime.setDmx(dmx);
+    runtime.update(0.1f, 0.0);
+    std::vector<MeshInstance> meshes;
+    std::vector<BeamState> beams;
+    runtime.emit(glm::mat4(1.0f), 1, meshes, beams);
+    REQUIRE(beams.size() == 1);
+    const BeamState& b = beams[0];
+    REQUIRE(b.prism.facetCount == 3);
+    REQUIRE(b.prism.rotation == Approx(0.0f).scale(1.0));
+
+    // The file's facet axes (GDTF) converted to the beam's local DmxViz axes with (x, y, z) -> (x, z, -y).
+    // The beam leaves along local -Y, "up" is local +Z, so local X = -cross(direction, up). Facet 1 is the
+    // only one with an x offset (towards local -X, i.e. to the right), which makes the layout asymmetric.
+    const glm::vec3 right = glm::cross(b.direction, b.up);
+    const glm::vec3 localAxes[3] = {{0.0f, -0.9961947f, -0.0871557f},
+                                    {-0.0871557f, -0.9961947f, 0.0f},
+                                    {0.0f, -0.9961947f, 0.0871557f}};
+    for (std::size_t i = 0; i < 3; ++i) {
+        const glm::vec3 expected =
+            glm::normalize(-localAxes[i].x * right - localAxes[i].y * b.direction + localAxes[i].z * b.up);
+        // The renderer builds a facet's direction exactly like this (BeamPacker.cpp).
+        const glm::vec2 o = b.prism.facets[i];
+        const glm::vec3 emitted = glm::normalize(b.direction + right * std::tan(o.x) + b.up * std::tan(o.y));
+        INFO("facet " << i);
+        checkVec(emitted, expected.x, expected.y, expected.z);
+    }
+    // Facet 1 leans to the right: positive x, and its direction has a positive component along "right".
+    CHECK(b.prism.facets[1].x > 0.0f);
+    CHECK(glm::dot(glm::normalize(b.direction + right * std::tan(b.prism.facets[1].x)), right) > 0.0f);
 }
 
 TEST_CASE("GDTF import: broken input is reported, not thrown") {

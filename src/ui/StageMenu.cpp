@@ -522,24 +522,17 @@ bool StageMenu::hangDialog(EditorContext& ctx) {
     options.snapAlong = hang_.snapAlong;
     options.reparent = hang_.reparent;
 
-    // Order the fixtures along the truss so a spread keeps their current left-to-right order.
-    const Aabb bounds = ctx.scene.worldBounds(trussId, ctx.assets, false);
-    const glm::vec3 size = bounds.empty() ? glm::vec3(0.0f) : bounds.size();
-    const int axis = size.x >= size.z ? 0 : 2;
-    std::sort(fixtureIds.begin(), fixtureIds.end(), [&](NodeId a, NodeId b) {
-        return ctx.scene.worldMatrix(a)[3][axis] < ctx.scene.worldMatrix(b)[3][axis];
-    });
+    if (hang_.spread) {
+        // Spread by length along the truss itself (arcs and circles included), keeping the current order.
+        if (std::unique_ptr<Command> spread = tools::hangSpreadOnTrussCommand(ctx.scene, fixtureIds, trussId, options))
+            ctx.commands.execute(std::move(spread));
+        return true;
+    }
 
     auto compound = std::make_unique<CompoundCommand>("Hang on truss");
-    for (std::size_t i = 0; i < fixtureIds.size(); ++i) {
-        glm::vec3 hitPoint = glm::vec3(ctx.scene.worldMatrix(fixtureIds[i])[3]);
-        if (hang_.spread && !bounds.empty()) {
-            const float t = (static_cast<float>(i) + 0.5f) / static_cast<float>(fixtureIds.size());
-            hitPoint = bounds.center();
-            hitPoint[axis] = bounds.min[axis] + t * size[axis];
-        }
-        if (std::unique_ptr<Command> hang =
-                tools::hangOnTrussCommand(ctx.scene, fixtureIds[i], trussId, hitPoint, options))
+    for (NodeId fixtureId : fixtureIds) {
+        const glm::vec3 hitPoint = glm::vec3(ctx.scene.worldMatrix(fixtureId)[3]);
+        if (std::unique_ptr<Command> hang = tools::hangOnTrussCommand(ctx.scene, fixtureId, trussId, hitPoint, options))
             compound->add(std::move(hang));
     }
     if (!compound->empty()) ctx.commands.execute(std::move(compound));

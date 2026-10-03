@@ -29,9 +29,12 @@ public:
     void look(float deltaYaw, float deltaPitch);
     void fly(const glm::vec3& localDirection, float metres);
 
-    // Fit the camera around a box, keeping the current view direction.
-    void frame(const Aabb& bounds);
-    void setPreset(Preset preset, const Aabb& stageBounds);
+    // Fit the camera around a box, keeping the current view direction. The whole box ends up inside both the
+    // vertical and the horizontal field of view (the narrower one decides), so `aspect` (width / height of the
+    // viewport) matters; the default suits a typical wide viewport.
+    static constexpr float kDefaultAspect = 16.0f / 9.0f;
+    void frame(const Aabb& bounds, float aspect = kDefaultAspect);
+    void setPreset(Preset preset, const Aabb& stageBounds, float aspect = kDefaultAspect);
     // Puts the camera at `eye` looking at `target` (camera presets). Ignores a degenerate pair.
     void lookFromTo(const glm::vec3& eye, const glm::vec3& target);
 

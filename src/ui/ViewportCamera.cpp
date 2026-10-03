@@ -2,6 +2,7 @@
 
 #include "imgui.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace dmxviz::ui {
@@ -10,6 +11,7 @@ namespace {
 constexpr float kMaxPitch = degToRad(89.0f);
 constexpr float kMinDistance = 0.2f;
 constexpr float kMaxDistance = 500.0f;
+constexpr float kFrameMargin = 1.05f;  // framing leaves a little air around the box
 
 glm::vec3 directionFromAngles(float yaw, float pitch) {
     // yaw 0 looks toward -Z; positive yaw turns toward -X (counter-clockwise seen from above).
@@ -56,11 +58,29 @@ void ViewportCamera::fly(const glm::vec3& localDirection, float metres) {
     target_ += glm::normalize(delta) * metres;
 }
 
-void ViewportCamera::frame(const Aabb& bounds) {
+void ViewportCamera::frame(const Aabb& bounds, float aspect) {
     if (bounds.empty()) return;
     target_ = bounds.center();
-    const float radius = std::max(0.5f, glm::length(bounds.size()) * 0.5f);
-    distance_ = std::clamp(radius / std::sin(fovY_ * 0.5f) * 1.1f, kMinDistance, kMaxDistance);
+
+    // Distance at which every corner of the box is inside both the vertical and the horizontal field of view.
+    // Fitting the bounding sphere instead would frame a flat, wide stage far too loosely. A box is treated as at
+    // least a metre across so a single small fixture is not framed from right on top of it.
+    const glm::vec3 half = glm::max(bounds.size() * 0.5f, glm::vec3(0.5f));
+    const glm::vec3 f = forward();
+    const glm::vec3 right = glm::normalize(glm::cross(f, glm::vec3(0, 1, 0)));
+    const glm::vec3 up = glm::cross(right, f);
+    const float tanV = std::tan(fovY_ * 0.5f);
+    const float tanH = tanV * std::max(aspect, 0.1f);
+    float distance = 0.0f;
+    for (int corner = 0; corner < 8; ++corner) {
+        const glm::vec3 p((corner & 1) ? half.x : -half.x, (corner & 2) ? half.y : -half.y,
+                          (corner & 4) ? half.z : -half.z);
+        // A corner at `along` in front of the target is `distance + along` from the eye.
+        const float along = glm::dot(p, f);
+        distance = std::max({distance, std::abs(glm::dot(p, right)) / tanH - along,
+                             std::abs(glm::dot(p, up)) / tanV - along});
+    }
+    distance_ = std::clamp(distance * kFrameMargin, kMinDistance, kMaxDistance);
 }
 
 void ViewportCamera::lookFromTo(const glm::vec3& eye, const glm::vec3& target) {
@@ -75,7 +95,7 @@ void ViewportCamera::lookFromTo(const glm::vec3& eye, const glm::vec3& target) {
     if (std::abs(f.x) + std::abs(f.z) > 1e-5f) yaw_ = std::atan2(-f.x, -f.z);
 }
 
-void ViewportCamera::setPreset(Preset preset, const Aabb& stageBounds) {
+void ViewportCamera::setPreset(Preset preset, const Aabb& stageBounds, float aspect) {
     switch (preset) {
         case Preset::Front: yaw_ = 0.0f; pitch_ = 0.0f; break;
         case Preset::Side: yaw_ = degToRad(90.0f); pitch_ = 0.0f; break;
@@ -83,7 +103,7 @@ void ViewportCamera::setPreset(Preset preset, const Aabb& stageBounds) {
         case Preset::Audience: yaw_ = 0.0f; pitch_ = degToRad(-8.0f); break;
         case Preset::Perspective: yaw_ = degToRad(-30.0f); pitch_ = degToRad(-20.0f); break;
     }
-    frame(stageBounds);
+    frame(stageBounds, aspect);
     if (preset == Preset::Audience) {
         // Eye height of a standing audience member, a few rows back.
         target_.y = std::max(1.7f, target_.y);

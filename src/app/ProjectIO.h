@@ -5,6 +5,7 @@
 // gathers the pieces the app holds: the scene, the environment settings (opaque
 // "environment" block) and the DMX configuration (opaque "dmx" block).
 
+#include "app/UserSettings.h"
 #include "dmx/DmxManager.h"
 #include "fixtures/FixtureLibrary.h"
 #include "render/RenderScene.h"
@@ -23,7 +24,9 @@ struct ProjectParts {
     dmx::DmxManager& dmx;
     fixtures::FixtureLibrary& fixtures;
     std::filesystem::path bundledFixtureDir;  // fixture types below this folder are not written into the project
-    // Renderer quality settings, saved in the environment block under "quality". Optional.
+    // Render quality is a per-user setting and is not saved in the project. Old projects stored it under
+    // environment.quality: when both pointers are set, loading one adopts that block once (see UserSettings).
+    UserSettings* userSettings = nullptr;
     render::RenderSettings* renderSettings = nullptr;
 };
 

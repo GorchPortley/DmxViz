@@ -7,6 +7,10 @@
 
 #include <doctest/doctest.h>
 
+#include <algorithm>
+#include <cmath>
+#include <vector>
+
 using namespace dmxviz;
 using namespace dmxviz::stage;
 using assets::AssetLibrary;
@@ -263,4 +267,92 @@ TEST_CASE("hang on a tower clamps on the outside of a vertical chord") {
     const glm::vec3 p = glm::vec3(hang->world[3]);
     CHECK(p.x > hang->chordPoint.x);
     CHECK(p.z > hang->chordPoint.z);
+}
+
+namespace {
+
+// Position of a hung fixture as angle (degrees, counter-clockwise seen from above, 0 on +X) and distance
+// from the vertical axis through the origin: where the arc built by TrussBuilder puts its points.
+struct PolarPos {
+    float angleDeg;
+    float radius;
+};
+
+PolarPos polarPos(const Scene& s, NodeId id) {
+    const glm::vec3 p = worldPos(s, id);
+    float angle = glm::degrees(std::atan2(-p.z, p.x));
+    if (angle < 0.0f) angle += 360.0f;
+    return {angle, std::hypot(p.x, p.z)};
+}
+
+}  // namespace
+
+TEST_CASE("hang spread on a truss: an arc is spread by arc length, not along its bounding box") {
+    Scene s;
+    const TrussProfile& f34 = *findTrussProfile("F34");
+    const float radius = 4.0f;
+    const NodeId arc = s.addNode(factory::trussArc(f34, radius, 180.0f, 2), at(0, 6, 0));
+
+    // Five fixtures in a scrambled order, standing on the floor under the arc at these angles.
+    const float startDeg[5] = {100.0f, 10.0f, 170.0f, 60.0f, 135.0f};
+    std::vector<NodeId> fixtures;
+    for (float deg : startDeg) {
+        const float a = glm::radians(deg);
+        fixtures.push_back(s.addNode(factory::fixture("generic/spot", "1ch"),
+                                     at(radius * std::cos(a), 0.0f, -radius * std::sin(a))));
+    }
+
+    CommandStack stack(s);
+    REQUIRE(stack.execute(tools::hangSpreadOnTrussCommand(s, fixtures, arc)));
+    CHECK(stack.undoCount() == 1);
+
+    // They keep their order (10, 60, 100, 135, 170 degrees) and share the 180 degrees in equal slots.
+    const std::size_t order[5] = {1, 3, 0, 4, 2};
+    const float h = f34.chordSpacing() * 0.5f;
+    const float chordRadius = polarPos(s, fixtures[order[0]]).radius;
+    CHECK((chordRadius == doctest::Approx(radius - h).epsilon(0.01) ||
+           chordRadius == doctest::Approx(radius + h).epsilon(0.01)));  // on a bottom chord of the arc
+    for (std::size_t slot = 0; slot < 5; ++slot) {
+        const PolarPos p = polarPos(s, fixtures[order[slot]]);
+        INFO("slot " << slot);
+        CHECK(p.angleDeg == doctest::Approx((static_cast<float>(slot) + 0.5f) * 36.0f).epsilon(0.002));
+        CHECK(p.radius == doctest::Approx(chordRadius).epsilon(0.005));  // all on the same chord
+        CHECK(worldPos(s, fixtures[order[slot]]).y < 6.0f);               // hanging below it
+    }
+
+    REQUIRE(stack.undo());
+    for (std::size_t i = 0; i < 5; ++i) {
+        const float a = glm::radians(startDeg[i]);
+        checkVec(worldPos(s, fixtures[i]), {radius * std::cos(a), 0.0f, -radius * std::sin(a)}, 1e-3f);
+    }
+}
+
+TEST_CASE("hang spread on a truss: a circle is spread evenly all the way round, a straight truss along its length") {
+    Scene s;
+    const TrussProfile& f34 = *findTrussProfile("F34");
+    const NodeId circle = s.addNode(factory::trussCircle(f34, 3.0f, 4), at(0, 5, 0));
+    std::vector<NodeId> ring;
+    for (int i = 0; i < 6; ++i) ring.push_back(s.addNode(factory::fixture("generic/spot", "1ch"), at(0.1f * i, 0, 0)));
+    CommandStack stack(s);
+    REQUIRE(stack.execute(tools::hangSpreadOnTrussCommand(s, ring, circle)));
+    std::vector<float> angles;  // the fixtures start near the centre, so which gets which slot is arbitrary
+    for (NodeId id : ring) angles.push_back(polarPos(s, id).angleDeg);
+    std::sort(angles.begin(), angles.end());
+    for (std::size_t i = 0; i < angles.size(); ++i) {
+        // Equal gaps, including the one across the start of the circle.
+        INFO("gap after slot " << i);
+        CHECK(std::fmod(angles[(i + 1) % angles.size()] - angles[i] + 360.0f, 360.0f) ==
+              doctest::Approx(60.0f).epsilon(0.005));
+    }
+
+    const NodeId straight = s.addNode(factory::trussStraight(f34, 3.0f), at(10, 5, 0));
+    std::vector<NodeId> row;
+    for (float x : {12.0f, 8.0f, 10.5f}) row.push_back(s.addNode(factory::fixture("generic/spot", "1ch"), at(x, 0, 0)));
+    REQUIRE(stack.execute(tools::hangSpreadOnTrussCommand(s, row, straight)));
+    CHECK(worldPos(s, row[1]).x == doctest::Approx(9.0f).epsilon(1e-4));  // leftmost fixture, first third
+    CHECK(worldPos(s, row[2]).x == doctest::Approx(10.0f).epsilon(1e-4));
+    CHECK(worldPos(s, row[0]).x == doctest::Approx(11.0f).epsilon(1e-4));
+
+    // Not a truss: nothing to do.
+    CHECK(tools::hangSpreadOnTrussCommand(s, row, row[0]) == nullptr);
 }

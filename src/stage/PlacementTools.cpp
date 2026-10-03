@@ -10,6 +10,7 @@
 #include <functional>
 #include <limits>
 #include <unordered_set>
+#include <utility>
 
 namespace dmxviz::stage::tools {
 namespace {
@@ -329,6 +330,89 @@ std::unique_ptr<Command> dropToFloor(const Scene& scene, assets::AssetLibrary& l
 
 // ---- hang on truss -------------------------------------------------------------
 
+namespace {
+
+struct WorldChord {
+    glm::vec3 a, b;
+};
+
+// The chord pieces a fixture can be clamped to, in world space and in the order the truss builder lists
+// them: the lowest horizontal ones, or every chord on a vertical truss (`hanging` = false).
+std::vector<WorldChord> hangableChords(const TrussContent& truss, const glm::mat4& world, bool& hanging) {
+    struct Piece {
+        WorldChord chord;
+        bool horizontal;
+    };
+    std::vector<Piece> pieces;
+    float lowest = std::numeric_limits<float>::max();
+    for (const truss::ChordLine& c : truss::trussChords(truss)) {
+        Piece p{{glm::vec3(world * glm::vec4(c.a, 1.0f)), glm::vec3(world * glm::vec4(c.b, 1.0f))}, false};
+        const glm::vec3 d = p.chord.b - p.chord.a;
+        const float len = glm::length(d);
+        if (len < 1e-6f) continue;
+        p.horizontal = std::abs(d.y) / len < 0.7f;  // less than ~45 degrees from level
+        if (p.horizontal) lowest = std::min(lowest, (p.chord.a.y + p.chord.b.y) * 0.5f);
+        pieces.push_back(p);
+    }
+    hanging = lowest < std::numeric_limits<float>::max();
+    // Bottom chords: horizontal chords whose middle is at the lowest level (within one chord radius).
+    const float r = truss::trussChordRadius(truss);
+    std::vector<WorldChord> chords;
+    for (const Piece& p : pieces) {
+        if (hanging && (!p.horizontal || (p.chord.a.y + p.chord.b.y) * 0.5f > lowest + r)) continue;
+        chords.push_back(p.chord);
+    }
+    return chords;
+}
+
+// The path fixtures are spread along: the first hangable chord, followed piece by piece (an arc is a
+// polyline of short pieces). Its length is what "evenly" is measured in, so arcs and circles work.
+std::vector<glm::vec3> spreadPath(const TrussContent& truss, const glm::mat4& world) {
+    bool hanging = false;
+    std::vector<glm::vec3> path;
+    for (const WorldChord& c : hangableChords(truss, world, hanging)) {
+        if (path.empty())
+            path.push_back(c.a);
+        else if (glm::distance(path.back(), c.a) > 1e-4f)
+            break;  // the next chord starts somewhere else
+        path.push_back(c.b);
+    }
+    return path;
+}
+
+// Distance from the start of `path` to its point nearest to `p`.
+float distanceAlong(const std::vector<glm::vec3>& path, const glm::vec3& p) {
+    float best = std::numeric_limits<float>::max();
+    float bestAlong = 0.0f;
+    float before = 0.0f;  // length of the pieces before this one
+    for (std::size_t i = 0; i + 1 < path.size(); ++i) {
+        const glm::vec3 d = path[i + 1] - path[i];
+        const float length = glm::length(d);
+        const float t = length > 1e-6f ? std::clamp(glm::dot(p - path[i], d) / (length * length), 0.0f, 1.0f) : 0.0f;
+        const float dist = glm::distance(path[i] + d * t, p);
+        if (dist < best) {
+            best = dist;
+            bestAlong = before + t * length;
+        }
+        before += length;
+    }
+    return bestAlong;
+}
+
+// The point `along` metres from the start of `path` (clamped to its ends).
+glm::vec3 pointAlong(const std::vector<glm::vec3>& path, float along) {
+    for (std::size_t i = 0; i + 1 < path.size(); ++i) {
+        const glm::vec3 d = path[i + 1] - path[i];
+        const float length = glm::length(d);
+        if (along <= length || i + 2 == path.size())
+            return path[i] + (length > 1e-6f ? d * (std::clamp(along, 0.0f, length) / length) : glm::vec3(0.0f));
+        along -= length;
+    }
+    return path.empty() ? glm::vec3(0.0f) : path.back();
+}
+
+}  // namespace
+
 std::optional<HangResult> hangOnTruss(const Scene& scene, NodeId fixture, NodeId trussId, const glm::vec3& hitPoint,
                                       const HangOptions& options) {
     const Node* fx = scene.find(fixture);
@@ -338,30 +422,14 @@ std::optional<HangResult> hangOnTruss(const Scene& scene, NodeId fixture, NodeId
     if (!truss) return std::nullopt;
 
     const glm::mat4 trussWorld = scene.worldMatrix(trussId);
-    struct WorldChord {
-        glm::vec3 a, b;
-        bool horizontal;
-    };
-    std::vector<WorldChord> chords;
-    float lowest = std::numeric_limits<float>::max();
-    for (const truss::ChordLine& c : truss::trussChords(*truss)) {
-        WorldChord w{glm::vec3(trussWorld * glm::vec4(c.a, 1.0f)), glm::vec3(trussWorld * glm::vec4(c.b, 1.0f)), false};
-        const glm::vec3 d = w.b - w.a;
-        const float len = glm::length(d);
-        if (len < 1e-6f) continue;
-        w.horizontal = std::abs(d.y) / len < 0.7f;  // less than ~45 degrees from level
-        if (w.horizontal) lowest = std::min(lowest, (w.a.y + w.b.y) * 0.5f);
-        chords.push_back(w);
-    }
+    bool anyHorizontal = false;
+    const std::vector<WorldChord> chords = hangableChords(*truss, trussWorld, anyHorizontal);
     if (chords.empty()) return std::nullopt;
-    // Bottom chords: horizontal chords whose middle is at the lowest level (within one chord radius).
     const float r = truss::trussChordRadius(*truss);
-    const bool anyHorizontal = lowest < std::numeric_limits<float>::max();
     const WorldChord* best = nullptr;
     glm::vec3 bestPoint(0.0f);
     float bestDist = std::numeric_limits<float>::max();
     for (const WorldChord& w : chords) {
-        if (anyHorizontal && (!w.horizontal || (w.a.y + w.b.y) * 0.5f > lowest + r)) continue;
         const glm::vec3 d = w.b - w.a;
         const float t = std::clamp(glm::dot(hitPoint - w.a, d) / glm::dot(d, d), 0.0f, 1.0f);
         const glm::vec3 p = w.a + d * t;
@@ -420,6 +488,36 @@ std::unique_ptr<Command> hangOnTrussCommand(const Scene& scene, NodeId fixture, 
     steps.push_back(std::make_unique<ReparentCommand>(std::vector<NodeId>{fixture}, hang->parent, -1, false));
     steps.push_back(std::move(move));
     return std::make_unique<CompoundCommand>("Hang on truss", std::move(steps));
+}
+
+std::unique_ptr<Command> hangSpreadOnTrussCommand(const Scene& scene, const std::vector<NodeId>& fixtures,
+                                                  NodeId trussId, const HangOptions& options) {
+    const Node* tn = scene.find(trussId);
+    const TrussContent* truss = tn != nullptr ? tn->as<TrussContent>() : nullptr;
+    if (truss == nullptr) return nullptr;
+    const std::vector<glm::vec3> path = spreadPath(*truss, scene.worldMatrix(trussId));
+    if (path.size() < 2) return nullptr;
+    float length = 0.0f;
+    for (std::size_t i = 0; i + 1 < path.size(); ++i) length += glm::distance(path[i], path[i + 1]);
+
+    // Keep the order the fixtures have along the truss now.
+    std::vector<std::pair<float, NodeId>> ordered;
+    for (NodeId id : fixtures) {
+        if (id == trussId || !scene.contains(id)) continue;
+        ordered.emplace_back(distanceAlong(path, glm::vec3(scene.worldMatrix(id)[3])), id);
+    }
+    std::stable_sort(ordered.begin(), ordered.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+
+    // Each fixture gets the middle of an equal share of the path.
+    auto compound = std::make_unique<CompoundCommand>("Hang on truss");
+    for (std::size_t i = 0; i < ordered.size(); ++i) {
+        const float along = length * (static_cast<float>(i) + 0.5f) / static_cast<float>(ordered.size());
+        if (std::unique_ptr<Command> hang =
+                hangOnTrussCommand(scene, ordered[i].second, trussId, pointAlong(path, along), options))
+            compound->add(std::move(hang));
+    }
+    if (compound->empty()) return nullptr;
+    return compound;
 }
 
 }  // namespace dmxviz::stage::tools

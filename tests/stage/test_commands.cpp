@@ -112,6 +112,62 @@ TEST_CASE("ReparentCommand: keeps world placement, restores order, refuses cycle
     CHECK_FALSE(stack.execute(std::make_unique<ReparentCommand>(std::vector<NodeId>{g}, b)));
 }
 
+TEST_CASE("ReparentCommand: several siblings of one parent move to another parent and undo restores the order") {
+    Scene s;
+    const NodeId p = s.addNode(makeNodeData(NodeKind::Group, "P"));
+    const NodeId q = s.addNode(makeNodeData(NodeKind::Group, "Q"));
+    std::vector<NodeId> kids;
+    for (const char* name : {"A", "B", "C", "D", "E", "F"})
+        kids.push_back(s.addNode(makeNodeData(NodeKind::Primitive, name), {}, p));
+    const NodeId x = s.addNode(makeNodeData(NodeKind::Primitive, "X"), {}, q);
+    const NodeId y = s.addNode(makeNodeData(NodeKind::Primitive, "Y"), {}, q);
+    const std::string original = describe(s);
+    const std::vector<NodeId> dragged{kids[0], kids[2], kids[4]};  // A, C, E: not next to each other
+
+    CommandStack stack(s);
+    REQUIRE(stack.execute(std::make_unique<ReparentCommand>(dragged, q, 1)));
+    const std::string afterMove = describe(s);
+    CHECK(s.childrenOf(q) == std::vector<NodeId>{x, kids[0], kids[2], kids[4], y});
+    CHECK(s.childrenOf(p) == std::vector<NodeId>{kids[1], kids[3], kids[5]});
+
+    REQUIRE(stack.undo());
+    CHECK(describe(s) == original);
+    REQUIRE(stack.redo());
+    CHECK(describe(s) == afterMove);
+    REQUIRE(stack.undo());
+    CHECK(describe(s) == original);
+}
+
+TEST_CASE("ReparentCommand: index counts among the siblings that are not dragged") {
+    Scene s;
+    const NodeId p = s.addNode(makeNodeData(NodeKind::Group, "P"));
+    std::vector<NodeId> k;
+    for (const char* name : {"A", "B", "C", "D", "E", "F"})
+        k.push_back(s.addNode(makeNodeData(NodeKind::Primitive, name), {}, p));
+    const std::string original = describe(s);
+    CommandStack stack(s);
+
+    // Dragging A and C inside their own parent: the others are B, D, E, F; index 2 is "before E".
+    REQUIRE(stack.execute(std::make_unique<ReparentCommand>(std::vector<NodeId>{k[0], k[2]}, p, 2)));
+    CHECK(s.childrenOf(p) == std::vector<NodeId>{k[1], k[3], k[0], k[2], k[4], k[5]});
+    REQUIRE(stack.undo());
+    CHECK(describe(s) == original);
+    REQUIRE(stack.redo());
+    CHECK(s.childrenOf(p) == std::vector<NodeId>{k[1], k[3], k[0], k[2], k[4], k[5]});
+    REQUIRE(stack.undo());
+    CHECK(describe(s) == original);
+
+    // Dragging B, D and F to the front, and C and E to the end (index -1).
+    REQUIRE(stack.execute(std::make_unique<ReparentCommand>(std::vector<NodeId>{k[1], k[3], k[5]}, p, 0)));
+    CHECK(s.childrenOf(p) == std::vector<NodeId>{k[1], k[3], k[5], k[0], k[2], k[4]});
+    REQUIRE(stack.undo());
+    CHECK(describe(s) == original);
+    REQUIRE(stack.execute(std::make_unique<ReparentCommand>(std::vector<NodeId>{k[2], k[4]}, p, -1)));
+    CHECK(s.childrenOf(p) == std::vector<NodeId>{k[0], k[1], k[3], k[5], k[2], k[4]});
+    REQUIRE(stack.undo());
+    CHECK(describe(s) == original);
+}
+
 TEST_CASE("SetTransformCommand: drags merge into one step until breakMerge") {
     Scene s;
     const NodeId a = s.addNode(makeNodeData(NodeKind::Primitive), moved(0, 0, 0));

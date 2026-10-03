@@ -10,6 +10,7 @@
 //
 // To add a panel, see ui/Panel.h and App::createPanels().
 
+#include "app/UserSettings.h"
 #include "assets/AssetLibrary.h"
 #include "dmx/DmxManager.h"
 #include "dmx/DmxSnapshot.h"
@@ -78,6 +79,9 @@ private:
     void drawUnsavedChangesDialog();
     void updateWindowTitle();
     void maybeTakeScreenshot();
+    // Writes the per-user settings (render quality) if they changed. While `idleOnly`, waits until no widget
+    // is being dragged, so a slider drag produces one write instead of one per frame.
+    void saveUserSettings(bool idleOnly);
 
     // ---- project commands -----------------------------------------------------------
     void newProject();
@@ -96,6 +100,8 @@ private:
     void sceneReplaced();
 
     AppOptions options_;
+    UserSettings userSettings_;     // render quality; a file next to the ImGui ini (none for screenshots)
+    std::string settingsError_;     // last failure of saveUserSettings, so it is logged once
     std::filesystem::path dataDir_;  // bundled data (fixtures, gobos, demo shows)
     double timeSeconds_ = 0.0;
     std::uint64_t frameIndex_ = 0;

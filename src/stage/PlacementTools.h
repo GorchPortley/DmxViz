@@ -128,4 +128,11 @@ std::optional<HangResult> hangOnTruss(const Scene& scene, NodeId fixture, NodeId
 std::unique_ptr<Command> hangOnTrussCommand(const Scene& scene, NodeId fixture, NodeId truss,
                                             const glm::vec3& hitPoint, const HangOptions& options = {});
 
+// Hangs `fixtures` on `truss` spread evenly along it: the fixtures keep their current order along the truss
+// and each takes the middle of an equal share of the chord's length. The length follows the chord, so arcs and
+// circles are spread by arc length (equal angles), not along their bounding box. Returns nullptr if `truss` is
+// not a truss node or no fixture can be hung.
+std::unique_ptr<Command> hangSpreadOnTrussCommand(const Scene& scene, const std::vector<NodeId>& fixtures,
+                                                  NodeId truss, const HangOptions& options = {});
+
 }  // namespace dmxviz::stage::tools

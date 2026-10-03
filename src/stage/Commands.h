@@ -99,7 +99,8 @@ private:
 
 // ---------------------------------------------------------------------------
 // Moves nodes under a new parent (kInvalidNode = top level), optionally at a
-// sibling index. keepWorld keeps them where they are in the world by
+// sibling index (counted among the new parent's children that are not being
+// moved; -1 appends). keepWorld keeps them where they are in the world by
 // adjusting their local transforms (the usual outliner drag behaviour).
 class ReparentCommand : public Command {
 public:
