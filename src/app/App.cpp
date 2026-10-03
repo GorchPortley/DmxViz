@@ -112,7 +112,17 @@ AppOptions parseCommandLine(int argc, char** argv) {
     return o;
 }
 
-App::App(AppOptions options) : options_(std::move(options)) {}
+namespace {
+
+// Both files sit in the working directory. Screenshots use neither: they start from the defaults.
+constexpr const char* kLayoutIniFile = "dmxviz_layout.ini";
+constexpr const char* kUserSettingsFile = "dmxviz_settings.json";
+
+}  // namespace
+
+App::App(AppOptions options)
+    : options_(std::move(options)),
+      userSettings_(options_.screenshotPath ? std::filesystem::path{} : std::filesystem::path{kUserSettingsFile}) {}
 App::~App() = default;
 
 // ---------------------------------------------------------------------------
@@ -128,13 +138,15 @@ void App::init() {
     simgui_desc_t gui{};
     gui.logger.func = slog_func;
     // Screenshots always start from the default layout.
-    gui.ini_filename = options_.screenshotPath ? nullptr : "dmxviz_layout.ini";
+    gui.ini_filename = options_.screenshotPath ? nullptr : kLayoutIniFile;
     simgui_setup(&gui);
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_NavEnableKeyboard;
     ui::applyTheme(sapp_dpi_scale());
 
     renderer_.init();
+    std::string settingsError;
+    if (!userSettings_.load(renderer_.settings(), settingsError)) log::warn("app", "{}", settingsError);
     log::info("app", "DmxViz started ({}x{})", sapp_width(), sapp_height());
 
     loadFixtureLibrary();
@@ -163,6 +175,7 @@ void App::cleanup() {
     viewport_ = nullptr;
     context_.reset();
     simulation_.reset();
+    saveUserSettings(false);
     renderer_.shutdown();
     simgui_shutdown();
     sg_shutdown();
@@ -270,6 +283,7 @@ void App::frame() {
     drawUnsavedChangesDialog();
     if (showImGuiDemo_) ImGui::ShowDemoWindow(&showImGuiDemo_);
     updateWindowTitle();
+    saveUserSettings(true);
 
     // 5: swapchain pass with ImGui on top.
     sg_pass pass{};
@@ -380,6 +394,17 @@ void App::updateWindowTitle() {
     sapp_set_window_title(title.c_str());
 }
 
+void App::saveUserSettings(bool idleOnly) {
+    if (idleOnly && ImGui::IsAnyItemActive()) return;
+    std::string error;
+    if (userSettings_.saveIfChanged(renderer_.settings(), error)) {
+        settingsError_.clear();
+    } else if (error != settingsError_) {  // it is retried every frame, but reported once
+        settingsError_ = error;
+        log::error("app", "cannot save user settings: {}", error);
+    }
+}
+
 void App::maybeTakeScreenshot() {
     if (!options_.screenshotPath || options_.exitAfterFrames <= 0) return;
     if (frameIndex_ + 1 != static_cast<std::uint64_t>(options_.exitAfterFrames)) return;
@@ -413,7 +438,9 @@ void App::newProject() {
 }
 
 bool App::openProject(const std::filesystem::path& file) {
-    const ProjectParts parts{scene_, environment_, dmx_, fixtures_, dataDir_ / "fixtures", &renderer_.settings()};
+    ProjectParts parts{scene_, environment_, dmx_, fixtures_, dataDir_ / "fixtures"};
+    parts.userSettings = &userSettings_;  // for the quality block of old projects
+    parts.renderSettings = &renderer_.settings();
     std::string error;
     if (!loadProjectFrom(parts, file, error)) {
         log::error("app", "cannot open {}: {}", file.string(), error);
@@ -428,7 +455,7 @@ bool App::openProject(const std::filesystem::path& file) {
 }
 
 bool App::saveToFile(const std::filesystem::path& file) {
-    const ProjectParts parts{scene_, environment_, dmx_, fixtures_, dataDir_ / "fixtures", &renderer_.settings()};
+    const ProjectParts parts{scene_, environment_, dmx_, fixtures_, dataDir_ / "fixtures"};
     std::string error;
     if (!app::saveProjectTo(parts, file, error)) {
         log::error("app", "cannot save {}: {}", file.string(), error);

@@ -31,6 +31,7 @@ void EnvironmentPanel::draw(EditorContext& ctx) {
     render::Environment& env = ctx.environment;
     render::RenderSettings& quality = ctx.renderer.settings();
     Changes changed;
+    Changes perUser;  // quality: a per-machine setting the app saves by itself, it does not make the project dirty
 
     ImGui::PushItemWidth(-ImGui::GetFontSize() * 9.0f);
 
@@ -49,23 +50,23 @@ void EnvironmentPanel::draw(EditorContext& ctx) {
     changed(ImGui::Checkbox("Show grid", &env.showGrid));
 
     ImGui::SeparatorText("Quality");
-    changed(ImGui::Checkbox("Volumetric beams", &quality.volumetrics));
+    perUser(ImGui::Checkbox("Volumetric beams", &quality.volumetrics));
     ImGui::SetItemTooltip("Off draws no haze beams: much faster, useful on slow graphics cards.");
     ImGui::BeginDisabled(!quality.volumetrics);
-    changed(ImGui::SliderInt("Min march steps", &quality.minMarchSteps, 2, 64));
-    changed(ImGui::SliderInt("Max march steps", &quality.maxMarchSteps, 4, 128));
+    perUser(ImGui::SliderInt("Min march steps", &quality.minMarchSteps, 2, 64));
+    perUser(ImGui::SliderInt("Max march steps", &quality.maxMarchSteps, 4, 128));
     quality.maxMarchSteps = std::max(quality.maxMarchSteps, quality.minMarchSteps);
-    changed(ImGui::SliderFloat("Pixels per step", &quality.marchPixelsPerStep, 2.0f, 24.0f, "%.1f"));
+    perUser(ImGui::SliderFloat("Pixels per step", &quality.marchPixelsPerStep, 2.0f, 24.0f, "%.1f"));
     ImGui::SetItemTooltip("Larger values use fewer steps per beam: faster but more banding.");
-    changed(ImGui::SliderFloat("Haze forward scatter", &quality.hazePhaseG, 0.0f, 0.95f, "%.2f"));
+    perUser(ImGui::SliderFloat("Haze forward scatter", &quality.hazePhaseG, 0.0f, 0.95f, "%.2f"));
     ImGui::EndDisabled();
-    changed(ImGui::Checkbox("Lens glow", &quality.lensGlow));
+    perUser(ImGui::Checkbox("Lens glow", &quality.lensGlow));
     ImGui::SameLine();
-    changed(ImGui::Checkbox("Bloom", &quality.bloom));
-    changed(ImGui::Checkbox("Beams stop at the floor", &quality.clipBeamsAtFloor));
+    perUser(ImGui::Checkbox("Bloom", &quality.bloom));
+    perUser(ImGui::Checkbox("Beams stop at the floor", &quality.clipBeamsAtFloor));
 
     int tonemapper = static_cast<int>(quality.tonemapper);
-    if (changed(ImGui::Combo("Tone mapping", &tonemapper, "ACES, keeps colours saturated\0ACES per channel\0")))
+    if (perUser(ImGui::Combo("Tone mapping", &tonemapper, "ACES, keeps colours saturated\0ACES per channel\0")))
         quality.tonemapper = static_cast<render::Tonemapper>(tonemapper);
 
     ImGui::Spacing();
