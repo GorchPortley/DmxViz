@@ -1,0 +1,85 @@
+{
+  "formatVersion": 1,
+  "id": "generic/led-strobe",
+  "manufacturer": "Generic",
+  "name": "LED Strobe Panel",
+  "shortName": "Strobe",
+  "description": "High-output LED strobe/blinder panel. Large rectangular emitter (0.5m x 0.12m), 30000 lm. 4-channel control: dimmer, strobe rate, strobe duration, effect.",
+  "source": "native",
+  "revision": "1",
+  "categories": ["Strobe"],
+  "physical": {
+    "weight": 6.5,
+    "power": 400,
+    "dimensions": [0.55, 0.18, 0.12],
+    "dimmerCurve": "linear"
+  },
+  "geometry": {
+    "name": "Base",
+    "type": "generic",
+    "model": {"primitive": "box", "size": [0.55, 0.18, 0.12], "color": [0.03, 0.03, 0.03]},
+    "children": [
+      {
+        "name": "Beam",
+        "type": "beam",
+        "position": [0, -0.09, 0],
+        "beam": {
+          "type": "rectangle",
+          "lensRadius": 0.08,
+          "beamAngle": 60,
+          "fieldAngle": 90,
+          "luminousFlux": 30000,
+          "colorTemperature": 5600,
+          "emitterSize": [0.5, 0.12]
+        }
+      }
+    ]
+  },
+  "modes": [
+    {
+      "name": "Strobe",
+      "description": "Dimmer, strobe rate, duration, and effect control",
+      "footprint": 4,
+      "channels": [
+        {
+          "name": "Dimmer",
+          "offsets": [1],
+          "geometry": "Beam",
+          "default": 0,
+          "highlight": 255,
+          "functions": [
+            {"attribute": "Dimmer", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Strobe Rate",
+          "offsets": [2],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Off", "attribute": "Shutter1", "kind": "shutterOpen", "dmx": [0, 9]},
+            {"name": "Strobe slow to fast", "attribute": "Shutter1Strobe", "dmx": [10, 255], "physical": [0.5, 30]}
+          ]
+        },
+        {
+          "name": "Strobe Duration",
+          "offsets": [3],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "NoFeature"}
+          ]
+        },
+        {
+          "name": "Effect",
+          "offsets": [4],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "NoFeature"}
+          ]
+        }
+      ]
+    }
+  ]
+}

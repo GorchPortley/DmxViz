@@ -1,0 +1,153 @@
+{
+  "formatVersion": 1,
+  "id": "generic/rgb-par",
+  "manufacturer": "Generic",
+  "name": "RGB LED Par",
+  "shortName": "RGB Par",
+  "description": "LED RGB par, 1500 lm, with simple 3-channel RGB and extended 7-channel mode including dimmer, strobe and program control.",
+  "source": "native",
+  "revision": "1",
+  "categories": ["Par", "Color Changer"],
+  "physical": {
+    "weight": 3.2,
+    "power": 60,
+    "dimensions": [0.20, 0.18, 0.20],
+    "dimmerCurve": "linear"
+  },
+  "geometry": {
+    "name": "Base",
+    "type": "generic",
+    "model": {"primitive": "base", "size": [0.20, 0.08, 0.20]},
+    "children": [
+      {
+        "name": "Body",
+        "type": "generic",
+        "position": [0, -0.08, 0],
+        "model": {"primitive": "conventional", "size": [0.20, 0.18, 0.20]},
+        "children": [
+          {
+            "name": "Beam",
+            "type": "beam",
+            "position": [0, -0.09, 0],
+            "beam": {
+              "type": "wash",
+              "lensRadius": 0.06,
+              "beamAngle": 25,
+              "fieldAngle": 32,
+              "luminousFlux": 1500,
+              "colorTemperature": 5600
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "modes": [
+    {
+      "name": "RGB",
+      "description": "3-channel RGB mode",
+      "footprint": 3,
+      "channels": [
+        {
+          "name": "Red",
+          "offsets": [1],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_R"}
+          ]
+        },
+        {
+          "name": "Green",
+          "offsets": [2],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_G"}
+          ]
+        },
+        {
+          "name": "Blue",
+          "offsets": [3],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_B"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Extended",
+      "description": "7-channel with dimmer, strobe and program control",
+      "footprint": 7,
+      "channels": [
+        {
+          "name": "Dimmer",
+          "offsets": [1],
+          "geometry": "Beam",
+          "default": 0,
+          "highlight": 255,
+          "functions": [
+            {"attribute": "Dimmer", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Red",
+          "offsets": [2],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_R"}
+          ]
+        },
+        {
+          "name": "Green",
+          "offsets": [3],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_G"}
+          ]
+        },
+        {
+          "name": "Blue",
+          "offsets": [4],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_B"}
+          ]
+        },
+        {
+          "name": "Strobe",
+          "offsets": [5],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Off", "attribute": "Shutter1", "kind": "shutterOpen", "dmx": [0, 9]},
+            {"name": "Strobe", "attribute": "Shutter1Strobe", "dmx": [10, 255], "physical": [1, 20]}
+          ]
+        },
+        {
+          "name": "Program",
+          "offsets": [6],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "NoFeature"}
+          ]
+        },
+        {
+          "name": "Program Speed",
+          "offsets": [7],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "NoFeature"}
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "formatVersion": 1,
+  "id": "generic/par64-dimmer",
+  "manufacturer": "Generic",
+  "name": "PAR64 Dimmer",
+  "shortName": "PAR64",
+  "description": "Conventional halogen PAR64 on a dimmer: simple 1-channel dimmer control. 1000W halogen lamp at 3200K.",
+  "source": "native",
+  "revision": "1",
+  "categories": ["Par"],
+  "physical": {
+    "weight": 8.5,
+    "power": 1000,
+    "dimensions": [0.26, 0.34, 0.26],
+    "dimmerCurve": "linear"
+  },
+  "geometry": {
+    "name": "Base",
+    "type": "generic",
+    "model": {"primitive": "base", "size": [0.26, 0.12, 0.26]},
+    "children": [
+      {
+        "name": "Yoke",
+        "type": "generic",
+        "position": [0, -0.12, 0],
+        "model": {"primitive": "yoke", "size": [0.28, 0.22, 0.08]},
+        "children": [
+          {
+            "name": "Body",
+            "type": "generic",
+            "position": [0, -0.11, 0],
+            "model": {"primitive": "conventional", "size": [0.26, 0.34, 0.26]},
+            "children": [
+              {
+                "name": "Beam",
+                "type": "beam",
+                "position": [0, -0.17, 0],
+                "beam": {
+                  "type": "wash",
+                  "lensRadius": 0.08,
+                  "beamAngle": 20,
+                  "fieldAngle": 30,
+                  "luminousFlux": 12000,
+                  "colorTemperature": 3200
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "modes": [
+    {
+      "name": "Dimmer",
+      "description": "Single dimmer channel",
+      "footprint": 1,
+      "channels": [
+        {
+          "name": "Dimmer",
+          "offsets": [1],
+          "geometry": "Beam",
+          "default": 0,
+          "highlight": 255,
+          "functions": [
+            {"attribute": "Dimmer", "physical": [0, 1]}
+          ]
+        }
+      ]
+    }
+  ]
+}

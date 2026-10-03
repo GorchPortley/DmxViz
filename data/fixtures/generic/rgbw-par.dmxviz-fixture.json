@@ -1,0 +1,171 @@
+{
+  "formatVersion": 1,
+  "id": "generic/rgbw-par",
+  "manufacturer": "Generic",
+  "name": "RGBW LED Par",
+  "shortName": "RGBW Par",
+  "description": "LED RGBW par, 2500 lm, with 4-channel RGBW mode and extended 8-channel mode including dimmer, strobe and program control.",
+  "source": "native",
+  "revision": "1",
+  "categories": ["Par", "Color Changer"],
+  "physical": {
+    "weight": 4.1,
+    "power": 80,
+    "dimensions": [0.22, 0.20, 0.22],
+    "dimmerCurve": "linear"
+  },
+  "geometry": {
+    "name": "Base",
+    "type": "generic",
+    "model": {"primitive": "base", "size": [0.22, 0.10, 0.22]},
+    "children": [
+      {
+        "name": "Body",
+        "type": "generic",
+        "position": [0, -0.10, 0],
+        "model": {"primitive": "conventional", "size": [0.22, 0.20, 0.22]},
+        "children": [
+          {
+            "name": "Beam",
+            "type": "beam",
+            "position": [0, -0.10, 0],
+            "beam": {
+              "type": "wash",
+              "lensRadius": 0.07,
+              "beamAngle": 25,
+              "fieldAngle": 32,
+              "luminousFlux": 2500,
+              "colorTemperature": 5600
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "modes": [
+    {
+      "name": "RGBW",
+      "description": "4-channel RGBW mode",
+      "footprint": 4,
+      "channels": [
+        {
+          "name": "Red",
+          "offsets": [1],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_R"}
+          ]
+        },
+        {
+          "name": "Green",
+          "offsets": [2],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_G"}
+          ]
+        },
+        {
+          "name": "Blue",
+          "offsets": [3],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_B"}
+          ]
+        },
+        {
+          "name": "White",
+          "offsets": [4],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_W"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Extended",
+      "description": "8-channel with dimmer, strobe and program control",
+      "footprint": 8,
+      "channels": [
+        {
+          "name": "Dimmer",
+          "offsets": [1],
+          "geometry": "Beam",
+          "default": 0,
+          "highlight": 255,
+          "functions": [
+            {"attribute": "Dimmer", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Red",
+          "offsets": [2],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_R"}
+          ]
+        },
+        {
+          "name": "Green",
+          "offsets": [3],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_G"}
+          ]
+        },
+        {
+          "name": "Blue",
+          "offsets": [4],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_B"}
+          ]
+        },
+        {
+          "name": "White",
+          "offsets": [5],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_W"}
+          ]
+        },
+        {
+          "name": "Strobe",
+          "offsets": [6],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Off", "attribute": "Shutter1", "kind": "shutterOpen", "dmx": [0, 9]},
+            {"name": "Strobe", "attribute": "Shutter1Strobe", "dmx": [10, 255], "physical": [1, 20]}
+          ]
+        },
+        {
+          "name": "Program",
+          "offsets": [7],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "NoFeature"}
+          ]
+        },
+        {
+          "name": "Program Speed",
+          "offsets": [8],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "NoFeature"}
+          ]
+        }
+      ]
+    }
+  ]
+}

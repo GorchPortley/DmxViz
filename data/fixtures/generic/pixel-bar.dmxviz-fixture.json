@@ -1,0 +1,479 @@
+{
+  "formatVersion": 1,
+  "id": "generic/pixel-bar",
+  "manufacturer": "Generic",
+  "name": "Pixel Bar 8",
+  "shortName": "PixelBar",
+  "description": "1m LED batten with 8 RGBW cells. 4-channel mode controls all cells together, 32-channel mode controls each cell individually.",
+  "source": "native",
+  "revision": "1",
+  "categories": ["Pixel Bar"],
+  "physical": {
+    "weight": 2.5,
+    "power": 120,
+    "dimensions": [1.0, 0.08, 0.08],
+    "dimmerCurve": "linear"
+  },
+  "geometry": {
+    "name": "Base",
+    "type": "generic",
+    "model": {"primitive": "box", "size": [1.0, 0.08, 0.08], "color": [0.05, 0.05, 0.05]},
+    "children": [
+      {
+        "name": "Cell 1",
+        "type": "beam",
+        "position": [-0.375, -0.04, 0],
+        "beam": {
+          "type": "rectangle",
+          "lensRadius": 0.02,
+          "beamAngle": 30,
+          "fieldAngle": 40,
+          "luminousFlux": 300,
+          "colorTemperature": 5600,
+          "emitterSize": [0.1, 0.06]
+        }
+      },
+      {
+        "name": "Cell 2",
+        "type": "beam",
+        "position": [-0.268, -0.04, 0],
+        "beam": {
+          "type": "rectangle",
+          "lensRadius": 0.02,
+          "beamAngle": 30,
+          "fieldAngle": 40,
+          "luminousFlux": 300,
+          "colorTemperature": 5600,
+          "emitterSize": [0.1, 0.06]
+        }
+      },
+      {
+        "name": "Cell 3",
+        "type": "beam",
+        "position": [-0.161, -0.04, 0],
+        "beam": {
+          "type": "rectangle",
+          "lensRadius": 0.02,
+          "beamAngle": 30,
+          "fieldAngle": 40,
+          "luminousFlux": 300,
+          "colorTemperature": 5600,
+          "emitterSize": [0.1, 0.06]
+        }
+      },
+      {
+        "name": "Cell 4",
+        "type": "beam",
+        "position": [-0.054, -0.04, 0],
+        "beam": {
+          "type": "rectangle",
+          "lensRadius": 0.02,
+          "beamAngle": 30,
+          "fieldAngle": 40,
+          "luminousFlux": 300,
+          "colorTemperature": 5600,
+          "emitterSize": [0.1, 0.06]
+        }
+      },
+      {
+        "name": "Cell 5",
+        "type": "beam",
+        "position": [0.054, -0.04, 0],
+        "beam": {
+          "type": "rectangle",
+          "lensRadius": 0.02,
+          "beamAngle": 30,
+          "fieldAngle": 40,
+          "luminousFlux": 300,
+          "colorTemperature": 5600,
+          "emitterSize": [0.1, 0.06]
+        }
+      },
+      {
+        "name": "Cell 6",
+        "type": "beam",
+        "position": [0.161, -0.04, 0],
+        "beam": {
+          "type": "rectangle",
+          "lensRadius": 0.02,
+          "beamAngle": 30,
+          "fieldAngle": 40,
+          "luminousFlux": 300,
+          "colorTemperature": 5600,
+          "emitterSize": [0.1, 0.06]
+        }
+      },
+      {
+        "name": "Cell 7",
+        "type": "beam",
+        "position": [0.268, -0.04, 0],
+        "beam": {
+          "type": "rectangle",
+          "lensRadius": 0.02,
+          "beamAngle": 30,
+          "fieldAngle": 40,
+          "luminousFlux": 300,
+          "colorTemperature": 5600,
+          "emitterSize": [0.1, 0.06]
+        }
+      },
+      {
+        "name": "Cell 8",
+        "type": "beam",
+        "position": [0.375, -0.04, 0],
+        "beam": {
+          "type": "rectangle",
+          "lensRadius": 0.02,
+          "beamAngle": 30,
+          "fieldAngle": 40,
+          "luminousFlux": 300,
+          "colorTemperature": 5600,
+          "emitterSize": [0.1, 0.06]
+        }
+      }
+    ]
+  },
+  "geometryGroups": [
+    {"name": "All Cells", "members": ["Cell 1", "Cell 2", "Cell 3", "Cell 4", "Cell 5", "Cell 6", "Cell 7", "Cell 8"]}
+  ],
+  "modes": [
+    {
+      "name": "Master",
+      "description": "4-channel RGBW, all cells together",
+      "footprint": 4,
+      "channels": [
+        {
+          "name": "Red",
+          "offsets": [1],
+          "geometry": "All Cells",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_R"}
+          ]
+        },
+        {
+          "name": "Green",
+          "offsets": [2],
+          "geometry": "All Cells",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_G"}
+          ]
+        },
+        {
+          "name": "Blue",
+          "offsets": [3],
+          "geometry": "All Cells",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_B"}
+          ]
+        },
+        {
+          "name": "White",
+          "offsets": [4],
+          "geometry": "All Cells",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_W"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Pixel",
+      "description": "32-channel per-cell RGBW control",
+      "footprint": 32,
+      "channels": [
+        {
+          "name": "Cell 1 Red",
+          "offsets": [1],
+          "geometry": "Cell 1",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_R"}
+          ]
+        },
+        {
+          "name": "Cell 1 Green",
+          "offsets": [2],
+          "geometry": "Cell 1",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_G"}
+          ]
+        },
+        {
+          "name": "Cell 1 Blue",
+          "offsets": [3],
+          "geometry": "Cell 1",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_B"}
+          ]
+        },
+        {
+          "name": "Cell 1 White",
+          "offsets": [4],
+          "geometry": "Cell 1",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_W"}
+          ]
+        },
+        {
+          "name": "Cell 2 Red",
+          "offsets": [5],
+          "geometry": "Cell 2",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_R"}
+          ]
+        },
+        {
+          "name": "Cell 2 Green",
+          "offsets": [6],
+          "geometry": "Cell 2",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_G"}
+          ]
+        },
+        {
+          "name": "Cell 2 Blue",
+          "offsets": [7],
+          "geometry": "Cell 2",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_B"}
+          ]
+        },
+        {
+          "name": "Cell 2 White",
+          "offsets": [8],
+          "geometry": "Cell 2",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_W"}
+          ]
+        },
+        {
+          "name": "Cell 3 Red",
+          "offsets": [9],
+          "geometry": "Cell 3",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_R"}
+          ]
+        },
+        {
+          "name": "Cell 3 Green",
+          "offsets": [10],
+          "geometry": "Cell 3",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_G"}
+          ]
+        },
+        {
+          "name": "Cell 3 Blue",
+          "offsets": [11],
+          "geometry": "Cell 3",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_B"}
+          ]
+        },
+        {
+          "name": "Cell 3 White",
+          "offsets": [12],
+          "geometry": "Cell 3",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_W"}
+          ]
+        },
+        {
+          "name": "Cell 4 Red",
+          "offsets": [13],
+          "geometry": "Cell 4",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_R"}
+          ]
+        },
+        {
+          "name": "Cell 4 Green",
+          "offsets": [14],
+          "geometry": "Cell 4",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_G"}
+          ]
+        },
+        {
+          "name": "Cell 4 Blue",
+          "offsets": [15],
+          "geometry": "Cell 4",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_B"}
+          ]
+        },
+        {
+          "name": "Cell 4 White",
+          "offsets": [16],
+          "geometry": "Cell 4",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_W"}
+          ]
+        },
+        {
+          "name": "Cell 5 Red",
+          "offsets": [17],
+          "geometry": "Cell 5",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_R"}
+          ]
+        },
+        {
+          "name": "Cell 5 Green",
+          "offsets": [18],
+          "geometry": "Cell 5",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_G"}
+          ]
+        },
+        {
+          "name": "Cell 5 Blue",
+          "offsets": [19],
+          "geometry": "Cell 5",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_B"}
+          ]
+        },
+        {
+          "name": "Cell 5 White",
+          "offsets": [20],
+          "geometry": "Cell 5",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_W"}
+          ]
+        },
+        {
+          "name": "Cell 6 Red",
+          "offsets": [21],
+          "geometry": "Cell 6",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_R"}
+          ]
+        },
+        {
+          "name": "Cell 6 Green",
+          "offsets": [22],
+          "geometry": "Cell 6",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_G"}
+          ]
+        },
+        {
+          "name": "Cell 6 Blue",
+          "offsets": [23],
+          "geometry": "Cell 6",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_B"}
+          ]
+        },
+        {
+          "name": "Cell 6 White",
+          "offsets": [24],
+          "geometry": "Cell 6",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_W"}
+          ]
+        },
+        {
+          "name": "Cell 7 Red",
+          "offsets": [25],
+          "geometry": "Cell 7",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_R"}
+          ]
+        },
+        {
+          "name": "Cell 7 Green",
+          "offsets": [26],
+          "geometry": "Cell 7",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_G"}
+          ]
+        },
+        {
+          "name": "Cell 7 Blue",
+          "offsets": [27],
+          "geometry": "Cell 7",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_B"}
+          ]
+        },
+        {
+          "name": "Cell 7 White",
+          "offsets": [28],
+          "geometry": "Cell 7",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_W"}
+          ]
+        },
+        {
+          "name": "Cell 8 Red",
+          "offsets": [29],
+          "geometry": "Cell 8",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_R"}
+          ]
+        },
+        {
+          "name": "Cell 8 Green",
+          "offsets": [30],
+          "geometry": "Cell 8",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_G"}
+          ]
+        },
+        {
+          "name": "Cell 8 Blue",
+          "offsets": [31],
+          "geometry": "Cell 8",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_B"}
+          ]
+        },
+        {
+          "name": "Cell 8 White",
+          "offsets": [32],
+          "geometry": "Cell 8",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_W"}
+          ]
+        }
+      ]
+    }
+  ]
+}

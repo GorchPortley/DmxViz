@@ -1,0 +1,332 @@
+{
+  "formatVersion": 1,
+  "id": "generic/beam-mover",
+  "manufacturer": "Generic",
+  "name": "Beam Moving Head",
+  "shortName": "Beam",
+  "description": "Sharpy-style LED beam moving head with narrow beam angle 2-3.8 degrees, color wheel, gobo wheel, rotating 8-facet prism, frost, focus, dimmer, shutter/strobe. 16-bit pan/tilt. 8000 lm.",
+  "source": "native",
+  "revision": "1",
+  "categories": ["Moving Head"],
+  "physical": {
+    "weight": 20,
+    "power": 320,
+    "dimensions": [0.30, 0.58, 0.25],
+    "dimmerCurve": "linear",
+    "movement": {
+      "panMaxSpeed": 216,
+      "tiltMaxSpeed": 180,
+      "panAcceleration": 600,
+      "tiltAcceleration": 600,
+      "wheelSlotsPerSecond": 10,
+      "indexRotationSpeed": 720
+    }
+  },
+  "wheels": [
+    {
+      "name": "Color wheel",
+      "slots": [
+        {"type": "open", "name": "Open"},
+        {"type": "color", "name": "Red", "color": "#e4002b"},
+        {"type": "color", "name": "Orange", "color": "#ff6900"},
+        {"type": "color", "name": "Yellow", "color": "#ffd100"},
+        {"type": "color", "name": "Green", "color": "#00a651"},
+        {"type": "color", "name": "Cyan", "color": "#00aeef"},
+        {"type": "color", "name": "Blue", "color": "#1d3d9f"},
+        {"type": "color", "name": "Magenta", "color": "#c2185b"},
+        {"type": "color", "name": "CTO", "color": "#ffae6e"},
+        {"type": "color", "name": "CTB", "color": "#add8ff"},
+        {"type": "color", "name": "Dark Green", "color": "#134a1a"},
+        {"type": "color", "name": "Pink", "color": "#ff99cc"},
+        {"type": "color", "name": "Purple", "color": "#6b2c91"},
+        {"type": "color", "name": "UV", "color": "#8800ff"}
+      ]
+    },
+    {
+      "name": "Gobo wheel",
+      "slots": [
+        {"type": "open", "name": "Open"},
+        {"type": "gobo", "name": "Dots", "image": "dots"},
+        {"type": "gobo", "name": "Star", "image": "star"},
+        {"type": "gobo", "name": "Breakup", "image": "breakup"},
+        {"type": "gobo", "name": "Lines", "image": "lines"},
+        {"type": "gobo", "name": "Tunnel", "image": "tunnel"},
+        {"type": "gobo", "name": "Flower", "image": "flower"},
+        {"type": "gobo", "name": "Triangle", "image": "triangle"},
+        {"type": "gobo", "name": "Spiral", "image": "spiral"}
+      ]
+    },
+    {
+      "name": "Prism wheel",
+      "slots": [
+        {"type": "open", "name": "Open"},
+        {"type": "prism", "name": "8-facet", "facetCount": 8, "deflection": 8}
+      ]
+    }
+  ],
+  "geometry": {
+    "name": "Base",
+    "type": "generic",
+    "position": [0, -0.07, 0],
+    "model": {"primitive": "base", "size": [0.30, 0.14, 0.25]},
+    "children": [
+      {
+        "name": "Yoke",
+        "type": "axis",
+        "position": [0, -0.28, 0],
+        "model": {"primitive": "yoke", "size": [0.32, 0.44, 0.09]},
+        "children": [
+          {
+            "name": "Head",
+            "type": "axis",
+            "position": [0, -0.04, 0],
+            "model": {"primitive": "head", "size": [0.22, 0.34, 0.22]},
+            "children": [
+              {
+                "name": "Beam",
+                "type": "beam",
+                "position": [0, -0.17, 0],
+                "beam": {
+                  "type": "beam",
+                  "lensRadius": 0.05,
+                  "beamAngle": 3,
+                  "fieldAngle": 5,
+                  "luminousFlux": 8000,
+                  "colorTemperature": 6500
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "modes": [
+    {
+      "name": "Standard",
+      "description": "16-bit pan/tilt, color, gobo, prism, frost, focus, zoom, dimmer, shutter",
+      "footprint": 22,
+      "channels": [
+        {
+          "name": "Pan",
+          "offsets": [1, 2],
+          "geometry": "Yoke",
+          "default": 32768,
+          "functions": [
+            {"attribute": "Pan", "physical": [-270, 270]}
+          ]
+        },
+        {
+          "name": "Tilt",
+          "offsets": [3, 4],
+          "geometry": "Head",
+          "default": 32768,
+          "functions": [
+            {"attribute": "Tilt", "physical": [-135, 135]}
+          ]
+        },
+        {
+          "name": "Shutter",
+          "offsets": [5],
+          "geometry": "Beam",
+          "default": 32,
+          "functions": [
+            {"name": "Closed", "attribute": "Shutter1", "kind": "shutterClosed", "dmx": [0, 31]},
+            {"name": "Open", "attribute": "Shutter1", "kind": "shutterOpen", "dmx": [32, 63]},
+            {"name": "Strobe slow to fast", "attribute": "Shutter1Strobe", "dmx": [64, 95], "physical": [1, 25]},
+            {"name": "Pulse", "attribute": "Shutter1StrobePulse", "dmx": [96, 127], "physical": [1, 10]},
+            {"name": "Random strobe", "attribute": "Shutter1StrobeRandom", "dmx": [128, 255], "physical": [1, 25]}
+          ]
+        },
+        {
+          "name": "Dimmer",
+          "offsets": [6],
+          "geometry": "Beam",
+          "default": 0,
+          "highlight": 255,
+          "functions": [
+            {"attribute": "Dimmer", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Color wheel",
+          "offsets": [7],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Open", "attribute": "Color1", "dmx": [0, 12], "wheel": "Color wheel", "slot": 1},
+            {"name": "Red", "attribute": "Color1", "dmx": [13, 25], "wheel": "Color wheel", "slot": 2},
+            {"name": "Orange", "attribute": "Color1", "dmx": [26, 38], "wheel": "Color wheel", "slot": 3},
+            {"name": "Yellow", "attribute": "Color1", "dmx": [39, 51], "wheel": "Color wheel", "slot": 4},
+            {"name": "Green", "attribute": "Color1", "dmx": [52, 64], "wheel": "Color wheel", "slot": 5},
+            {"name": "Cyan", "attribute": "Color1", "dmx": [65, 77], "wheel": "Color wheel", "slot": 6},
+            {"name": "Blue", "attribute": "Color1", "dmx": [78, 90], "wheel": "Color wheel", "slot": 7},
+            {"name": "Magenta", "attribute": "Color1", "dmx": [91, 103], "wheel": "Color wheel", "slot": 8},
+            {"name": "CTO", "attribute": "Color1", "dmx": [104, 116], "wheel": "Color wheel", "slot": 9},
+            {"name": "CTB", "attribute": "Color1", "dmx": [117, 129], "wheel": "Color wheel", "slot": 10},
+            {"name": "Dark Green", "attribute": "Color1", "dmx": [130, 142], "wheel": "Color wheel", "slot": 11},
+            {"name": "Pink", "attribute": "Color1", "dmx": [143, 155], "wheel": "Color wheel", "slot": 12},
+            {"name": "Purple", "attribute": "Color1", "dmx": [156, 168], "wheel": "Color wheel", "slot": 13},
+            {"name": "UV", "attribute": "Color1", "dmx": [169, 181], "wheel": "Color wheel", "slot": 14},
+            {"name": "Forward", "attribute": "Color1WheelSpin", "dmx": [182, 218], "physical": [5, 360], "wheel": "Color wheel"},
+            {"name": "Reverse", "attribute": "Color1WheelSpin", "dmx": [219, 255], "physical": [-5, -360], "wheel": "Color wheel"}
+          ]
+        },
+        {
+          "name": "Gobo wheel",
+          "offsets": [8],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Open", "attribute": "Gobo1", "dmx": [0, 9], "wheel": "Gobo wheel", "slot": 1},
+            {"name": "Dots", "attribute": "Gobo1", "dmx": [10, 20], "wheel": "Gobo wheel", "slot": 2},
+            {"name": "Star", "attribute": "Gobo1", "dmx": [21, 31], "wheel": "Gobo wheel", "slot": 3},
+            {"name": "Breakup", "attribute": "Gobo1", "dmx": [32, 42], "wheel": "Gobo wheel", "slot": 4},
+            {"name": "Lines", "attribute": "Gobo1", "dmx": [43, 53], "wheel": "Gobo wheel", "slot": 5},
+            {"name": "Tunnel", "attribute": "Gobo1", "dmx": [54, 64], "wheel": "Gobo wheel", "slot": 6},
+            {"name": "Flower", "attribute": "Gobo1", "dmx": [65, 75], "wheel": "Gobo wheel", "slot": 7},
+            {"name": "Triangle", "attribute": "Gobo1", "dmx": [76, 86], "wheel": "Gobo wheel", "slot": 8},
+            {"name": "Spiral", "attribute": "Gobo1", "dmx": [87, 97], "wheel": "Gobo wheel", "slot": 9},
+            {"name": "Spin forward", "attribute": "Gobo1WheelSpin", "dmx": [98, 176], "physical": [5, 180], "wheel": "Gobo wheel"},
+            {"name": "Spin reverse", "attribute": "Gobo1WheelSpin", "dmx": [177, 255], "physical": [-5, -180], "wheel": "Gobo wheel"}
+          ]
+        },
+        {
+          "name": "Gobo rotation",
+          "offsets": [9],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Index", "attribute": "Gobo1Pos", "dmx": [0, 127], "physical": [0, 360]},
+            {"name": "Spin forward", "attribute": "Gobo1PosRotate", "dmx": [128, 191], "physical": [5, 360]},
+            {"name": "Spin reverse", "attribute": "Gobo1PosRotate", "dmx": [192, 255], "physical": [-5, -360]}
+          ]
+        },
+        {
+          "name": "Prism",
+          "offsets": [10],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Out", "attribute": "Prism1", "dmx": [0, 127], "wheel": "Prism wheel", "slot": 1},
+            {"name": "8-facet in", "attribute": "Prism1", "dmx": [128, 255], "wheel": "Prism wheel", "slot": 2}
+          ]
+        },
+        {
+          "name": "Prism rotation",
+          "offsets": [11],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"name": "Index", "attribute": "Prism1Pos", "dmx": [0, 127], "physical": [0, 360]},
+            {"name": "Spin forward", "attribute": "Prism1PosRotate", "dmx": [128, 191], "physical": [5, 360]},
+            {"name": "Spin reverse", "attribute": "Prism1PosRotate", "dmx": [192, 255], "physical": [-5, -360]}
+          ]
+        },
+        {
+          "name": "Frost",
+          "offsets": [12],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "Frost1", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Focus",
+          "offsets": [13],
+          "geometry": "Beam",
+          "default": 128,
+          "functions": [
+            {"attribute": "Focus1", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Zoom",
+          "offsets": [14],
+          "geometry": "Beam",
+          "default": 128,
+          "functions": [
+            {"attribute": "Zoom", "physical": [2, 3.8]}
+          ]
+        },
+        {
+          "name": "Pan Fine",
+          "offsets": [15],
+          "geometry": "Yoke",
+          "default": 128,
+          "functions": [
+            {"attribute": "Pan"}
+          ]
+        },
+        {
+          "name": "Tilt Fine",
+          "offsets": [16],
+          "geometry": "Head",
+          "default": 128,
+          "functions": [
+            {"attribute": "Tilt"}
+          ]
+        },
+        {
+          "name": "Control",
+          "offsets": [17],
+          "default": 0,
+          "functions": [
+            {"attribute": "NoFeature"}
+          ]
+        },
+        {
+          "name": "Reserved 1",
+          "offsets": [18],
+          "default": 0,
+          "functions": [
+            {"attribute": "NoFeature"}
+          ]
+        },
+        {
+          "name": "Reserved 2",
+          "offsets": [19],
+          "default": 0,
+          "functions": [
+            {"attribute": "NoFeature"}
+          ]
+        },
+        {
+          "name": "Reserved 3",
+          "offsets": [20],
+          "default": 0,
+          "functions": [
+            {"attribute": "NoFeature"}
+          ]
+        },
+        {
+          "name": "Reserved 4",
+          "offsets": [21],
+          "default": 0,
+          "functions": [
+            {"attribute": "NoFeature"}
+          ]
+        },
+        {
+          "name": "Reserved 5",
+          "offsets": [22],
+          "default": 0,
+          "functions": [
+            {"attribute": "NoFeature"}
+          ]
+        }
+      ]
+    }
+  ],
+  "resources": [
+    {"name": "dots", "format": "svg", "file": "../../gobos/dots.svg"},
+    {"name": "star", "format": "svg", "file": "../../gobos/star.svg"},
+    {"name": "breakup", "format": "svg", "file": "../../gobos/breakup.svg"},
+    {"name": "lines", "format": "svg", "file": "../../gobos/lines.svg"},
+    {"name": "tunnel", "format": "svg", "file": "../../gobos/tunnel.svg"},
+    {"name": "flower", "format": "svg", "file": "../../gobos/flower.svg"},
+    {"name": "triangle", "format": "svg", "file": "../../gobos/triangle.svg"},
+    {"name": "spiral", "format": "svg", "file": "../../gobos/spiral.svg"}
+  ]
+}

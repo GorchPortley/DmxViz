@@ -1,0 +1,180 @@
+{
+  "formatVersion": 1,
+  "id": "generic/led-wash-mover",
+  "manufacturer": "Generic",
+  "name": "LED Wash Moving Head",
+  "shortName": "LED Wash",
+  "description": "LED moving head wash with RGBW color control, 16-bit pan/tilt, zoom 7-50 degrees, dimmer, shutter/strobe. 9000 lm output.",
+  "source": "native",
+  "revision": "1",
+  "categories": ["Moving Head", "Color Changer"],
+  "physical": {
+    "weight": 18.5,
+    "power": 280,
+    "dimensions": [0.32, 0.50, 0.28],
+    "dimmerCurve": "linear",
+    "movement": {
+      "panMaxSpeed": 216,
+      "tiltMaxSpeed": 180,
+      "panAcceleration": 600,
+      "tiltAcceleration": 600,
+      "wheelSlotsPerSecond": 10
+    }
+  },
+  "geometry": {
+    "name": "Base",
+    "type": "generic",
+    "position": [0, -0.06, 0],
+    "model": {"primitive": "base", "size": [0.32, 0.12, 0.28]},
+    "children": [
+      {
+        "name": "Yoke",
+        "type": "axis",
+        "position": [0, -0.25, 0],
+        "model": {"primitive": "yoke", "size": [0.34, 0.38, 0.08]},
+        "children": [
+          {
+            "name": "Head",
+            "type": "axis",
+            "position": [0, -0.15, 0],
+            "model": {"primitive": "head", "size": [0.22, 0.28, 0.22]},
+            "children": [
+              {
+                "name": "Beam",
+                "type": "beam",
+                "position": [0, -0.14, 0],
+                "beam": {
+                  "type": "wash",
+                  "lensRadius": 0.07,
+                  "beamAngle": 25,
+                  "fieldAngle": 35,
+                  "luminousFlux": 9000,
+                  "colorTemperature": 5600
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "modes": [
+    {
+      "name": "Standard",
+      "description": "16-bit pan/tilt, RGBW, zoom, dimmer, strobe",
+      "footprint": 14,
+      "channels": [
+        {
+          "name": "Pan",
+          "offsets": [1, 2],
+          "geometry": "Yoke",
+          "default": 32768,
+          "functions": [
+            {"attribute": "Pan", "physical": [-270, 270]}
+          ]
+        },
+        {
+          "name": "Tilt",
+          "offsets": [3, 4],
+          "geometry": "Head",
+          "default": 32768,
+          "functions": [
+            {"attribute": "Tilt", "physical": [-135, 135]}
+          ]
+        },
+        {
+          "name": "Dimmer",
+          "offsets": [5],
+          "geometry": "Beam",
+          "default": 0,
+          "highlight": 255,
+          "functions": [
+            {"attribute": "Dimmer", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Red",
+          "offsets": [6],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_R"}
+          ]
+        },
+        {
+          "name": "Green",
+          "offsets": [7],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_G"}
+          ]
+        },
+        {
+          "name": "Blue",
+          "offsets": [8],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_B"}
+          ]
+        },
+        {
+          "name": "White",
+          "offsets": [9],
+          "geometry": "Beam",
+          "default": 0,
+          "functions": [
+            {"attribute": "ColorAdd_W"}
+          ]
+        },
+        {
+          "name": "Zoom",
+          "offsets": [10],
+          "geometry": "Beam",
+          "default": 128,
+          "functions": [
+            {"attribute": "Zoom", "physical": [7, 50]}
+          ]
+        },
+        {
+          "name": "Shutter",
+          "offsets": [11],
+          "geometry": "Beam",
+          "default": 32,
+          "functions": [
+            {"name": "Closed", "attribute": "Shutter1", "kind": "shutterClosed", "dmx": [0, 31]},
+            {"name": "Open", "attribute": "Shutter1", "kind": "shutterOpen", "dmx": [32, 63]},
+            {"name": "Strobe slow to fast", "attribute": "Shutter1Strobe", "dmx": [64, 255], "physical": [1, 25]}
+          ]
+        },
+        {
+          "name": "Pan Fine",
+          "offsets": [12],
+          "geometry": "Yoke",
+          "default": 128,
+          "functions": [
+            {"attribute": "Pan", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Tilt Fine",
+          "offsets": [13],
+          "geometry": "Head",
+          "default": 128,
+          "functions": [
+            {"attribute": "Tilt", "physical": [0, 1]}
+          ]
+        },
+        {
+          "name": "Control",
+          "offsets": [14],
+          "default": 0,
+          "functions": [
+            {"attribute": "NoFeature"}
+          ]
+        }
+      ]
+    }
+  ]
+}
