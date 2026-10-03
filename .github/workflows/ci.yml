@@ -53,6 +53,15 @@ jobs:
       - name: Unit tests
         run: ctest --test-dir build -C RelWithDebInfo --output-on-failure
 
+      - name: Simulation benchmark (informational)
+        if: runner.os == 'Linux'
+        shell: bash
+        # CPU time and heap allocations per frame for the 500 fixture / 1200 beam / 64 universe reference rig
+        # (NFR-1). Shared runners are noisy, so this never fails on the numbers, only if the tool crashes.
+        run: |
+          ./build/tools/sim_bench/sim_bench --frames 300 | tee sim_bench.txt
+          { echo '### Simulation benchmark'; echo '```'; cat sim_bench.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Smoke test (headless screenshot)
         if: runner.os == 'Linux'
         run: |
