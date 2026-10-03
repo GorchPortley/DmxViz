@@ -19,12 +19,16 @@
 #include "dmx/interfaces/SacnInterface.h"
 #include "stage/ProjectFile.h"
 #include "ui/DockLayout.h"
+#include "ui/DmxInterfacesPanel.h"
+#include "ui/DmxMonitorPanel.h"
 #include "ui/EnvironmentPanel.h"
+#include "ui/FixtureLibraryPanel.h"
 #include "ui/InspectorPanel.h"
+#include "ui/PatchPanel.h"
+#include "ui/TestConsolePanel.h"
 #include "ui/LogPanel.h"
 #include "ui/OutlinerPanel.h"
 #include "ui/PanelTitles.h"
-#include "ui/PlaceholderPanel.h"
 #include "ui/StageMenu.h"
 #include "ui/Theme.h"
 
@@ -204,8 +208,11 @@ void App::createPanels() {
     panels_.push_back(std::make_unique<ui::OutlinerPanel>());
     panels_.push_back(std::make_unique<ui::InspectorPanel>());
     panels_.push_back(std::make_unique<ui::EnvironmentPanel>());
-    // Placeholders: replace each by its real panel (same title) when it exists.
-    panels_.push_back(std::make_unique<ui::PlaceholderPanel>(ui::kDmxMonitorTitle));
+    panels_.push_back(std::make_unique<ui::FixtureLibraryPanel>());
+    panels_.push_back(std::make_unique<ui::PatchPanel>());
+    panels_.push_back(std::make_unique<ui::TestConsolePanel>());
+    panels_.push_back(std::make_unique<ui::DmxMonitorPanel>());
+    panels_.push_back(std::make_unique<ui::DmxInterfacesPanel>());
     panels_.push_back(std::make_unique<ui::LogPanel>());
 }
 
@@ -387,6 +394,8 @@ void App::maybeTakeScreenshot() {
 
 void App::sceneReplaced() {
     simulation_->invalidate();
+    // Node ids restart in a new scene, so programmer values from the old one would hit other fixtures.
+    dmx_.clearProgrammer();
     selection_.clear();
     commands_.clear();
     commands_.markSaved();

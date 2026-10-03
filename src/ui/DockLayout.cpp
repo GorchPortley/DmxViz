@@ -29,9 +29,13 @@ void ensureDefaultDockLayout(unsigned int dockspaceId, bool force) {
     bottom = ImGui::DockBuilderSplitNode(rest, ImGuiDir_Down, 0.27f, nullptr, &rest);
 
     ImGui::DockBuilderDockWindow(kOutlinerTitle, left);
+    ImGui::DockBuilderDockWindow(kFixtureLibraryTitle, left);
     ImGui::DockBuilderDockWindow(kInspectorTitle, right);
     ImGui::DockBuilderDockWindow(kEnvironmentTitle, right);  // tab next to the Inspector
     ImGui::DockBuilderDockWindow(kDmxMonitorTitle, bottom);
+    ImGui::DockBuilderDockWindow(kPatchTitle, bottom);
+    ImGui::DockBuilderDockWindow(kTestConsoleTitle, bottom);
+    ImGui::DockBuilderDockWindow(kDmxInterfacesTitle, bottom);
     ImGui::DockBuilderDockWindow(kLogTitle, bottom);
     ImGui::DockBuilderDockWindow(kViewportTitle, rest);
     ImGui::DockBuilderFinish(dockspaceId);
