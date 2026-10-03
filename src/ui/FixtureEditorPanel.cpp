@@ -42,7 +42,8 @@ const char* FixtureEditorPanel::title() const {
 
 void FixtureEditorPanel::draw(EditorContext& ctx) {
     pollSaveDialog();
-    if (std::optional<std::string> id = FixtureEditRequests::take()) requestOpen(ctx, {OpenRequest::Kind::Copy, std::move(*id)});
+    if (std::optional<std::string> id = FixtureEditRequests::take())
+        requestOpen(ctx, {OpenRequest::Kind::Copy, std::move(*id)});
 
     drawToolbar(ctx);
     if (!doc_.isOpen()) {
@@ -91,8 +92,10 @@ void FixtureEditorPanel::drawToolbar(EditorContext& ctx) {
     if (ImGui::Button("Apply")) applyToLibrary(ctx);
     ImGui::EndDisabled();
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-        if (isOpen && counts_.errors > 0) ImGui::SetTooltip("Fix the %d error(s) listed under Validation first.", counts_.errors);
-        else if (isOpen) ImGui::SetTooltip("Add this fixture to the library, or replace the one with the same id.");
+        if (isOpen && counts_.errors > 0)
+            ImGui::SetTooltip("Fix the %d error(s) listed under Validation first.", counts_.errors);
+        else if (isOpen)
+            ImGui::SetTooltip("Add this fixture to the library, or replace the one with the same id.");
     }
 
     ImGui::SameLine();
@@ -100,8 +103,9 @@ void FixtureEditorPanel::drawToolbar(EditorContext& ctx) {
     if (ImGui::Button("Save as native file...")) requestSave();
     ImGui::EndDisabled();
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-        ImGui::SetTooltip(FileDialogs::available() ? "Write the fixture to a .dmxviz-fixture.json file (self-contained)."
-                                                   : "No file dialog available (on Linux install zenity or kdialog).");
+        ImGui::SetTooltip(FileDialogs::available()
+                              ? "Write the fixture to a .dmxviz-fixture.json file (self-contained)."
+                              : "No file dialog available (on Linux install zenity or kdialog).");
 
     ImGui::SameLine();
     ImGui::BeginDisabled(!isOpen || !doc_.modified());
@@ -156,10 +160,13 @@ void FixtureEditorPanel::drawHeader(EditorContext& ctx) {
     ImGui::SameLine();
     ImGui::TextDisabled("[%s]%s", type.id.c_str(), doc_.modified() ? "  modified" : "");
     ImGui::SameLine();
-    if (counts_.errors > 0) ImGui::TextColored(fixture_editor::errorColor(), "  %d error%s", counts_.errors, counts_.errors == 1 ? "" : "s");
+    if (counts_.errors > 0)
+        ImGui::TextColored(fixture_editor::errorColor(), "  %d error%s", counts_.errors,
+                           counts_.errors == 1 ? "" : "s");
     if (counts_.warnings > 0) {
         ImGui::SameLine();
-        ImGui::TextColored(fixture_editor::warningColor(), "  %d warning%s", counts_.warnings, counts_.warnings == 1 ? "" : "s");
+        ImGui::TextColored(fixture_editor::warningColor(), "  %d warning%s", counts_.warnings,
+                           counts_.warnings == 1 ? "" : "s");
     }
     if (counts_.errors == 0 && counts_.warnings == 0) {
         ImGui::SameLine();
@@ -174,11 +181,13 @@ void FixtureEditorPanel::drawHeader(EditorContext& ctx) {
 
 void FixtureEditorPanel::drawStartScreen(EditorContext& ctx) {
     ImGui::Spacing();
-    ImGui::TextWrapped("The fixture editor changes a copy of a fixture type. Press Edit in the Fixture Library, use Open above, "
-                       "or start a new fixture from a template:");
+    ImGui::TextWrapped(
+        "The fixture editor changes a copy of a fixture type. Press Edit in the Fixture Library, use Open above, "
+        "or start a new fixture from a template:");
     ImGui::Spacing();
     for (FixtureTemplate tmpl : fixture_editor::kAllTemplates) {
-        if (ImGui::Button(fixture_editor::templateName(tmpl), ImVec2(130.0f, 0.0f))) requestOpen(ctx, {OpenRequest::Kind::New, {}, tmpl});
+        if (ImGui::Button(fixture_editor::templateName(tmpl), ImVec2(130.0f, 0.0f)))
+            requestOpen(ctx, {OpenRequest::Kind::New, {}, tmpl});
         ImGui::SameLine();
     }
     ImGui::NewLine();
@@ -198,12 +207,15 @@ void FixtureEditorPanel::drawBody(EditorContext& ctx) {
     const float spacing = ImGui::GetStyle().ItemSpacing.x;
     const float previewWidth = sideBySide ? std::clamp(availableWidth * 0.36f, 300.0f, 520.0f) : 0.0f;
 
-    if (ImGui::BeginChild("##editorTabsArea", ImVec2(sideBySide ? availableWidth - previewWidth - spacing : 0.0f, 0.0f))) drawTabs(ctx, !sideBySide);
+    if (ImGui::BeginChild("##editorTabsArea",
+                          ImVec2(sideBySide ? availableWidth - previewWidth - spacing : 0.0f, 0.0f)))
+        drawTabs(ctx, !sideBySide);
     ImGui::EndChild();
 
     if (!sideBySide) return;
     ImGui::SameLine();
-    if (ImGui::BeginChild("##previewArea", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+    if (ImGui::BeginChild("##previewArea", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders,
+                          ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
         preview_.draw(ctx, doc_.type(), doc_.revision(), currentMode());
     ImGui::EndChild();
 }
@@ -238,7 +250,8 @@ void FixtureEditorPanel::drawTabs(EditorContext& ctx, bool previewAsTab) {
 
     char validationLabel[64];
     if (counts_.errors + counts_.warnings > 0)
-        std::snprintf(validationLabel, sizeof(validationLabel), "Validation (%d)###validationTab", counts_.errors + counts_.warnings);
+        std::snprintf(validationLabel, sizeof(validationLabel), "Validation (%d)###validationTab",
+                      counts_.errors + counts_.warnings);
     else
         std::snprintf(validationLabel, sizeof(validationLabel), "Validation###validationTab");
     if (beginTab(validationLabel, Tab::Validation)) {
@@ -257,7 +270,9 @@ void FixtureEditorPanel::drawTabs(EditorContext& ctx, bool previewAsTab) {
 
 void FixtureEditorPanel::jumpTo(const Problem& problem) {
     switch (problem.area) {
-        case ProblemArea::General: requestedTab_ = Tab::General; break;
+        case ProblemArea::General:
+            requestedTab_ = Tab::General;
+            break;
         case ProblemArea::Geometry:
             requestedTab_ = Tab::Geometry;
             if (!problem.geometry.empty()) geometry_.select(doc_.type(), problem.geometry);
@@ -300,7 +315,8 @@ void FixtureEditorPanel::requestOpen(EditorContext& ctx, OpenRequest request) {
 
 void FixtureEditorPanel::openNow(EditorContext& ctx, const OpenRequest& request) {
     switch (request.kind) {
-        case OpenRequest::Kind::None: return;
+        case OpenRequest::Kind::None:
+            return;
         case OpenRequest::Kind::Close:
             doc_.close();
             setStatus({}, false);
@@ -312,12 +328,14 @@ void FixtureEditorPanel::openNow(EditorContext& ctx, const OpenRequest& request)
                 return;
             }
             doc_.openCopy(*type);
-            setStatus(std::format("Editing a copy of {}. Apply writes it back to the library.", type->displayName()), false);
+            setStatus(std::format("Editing a copy of {}. Apply writes it back to the library.", type->displayName()),
+                      false);
             break;
         }
         case OpenRequest::Kind::New:
             doc_.openNew(request.tmpl, idTakenFn(ctx));
-            setStatus(std::format("New fixture from the {} template.", fixture_editor::templateName(request.tmpl)), false);
+            setStatus(std::format("New fixture from the {} template.", fixture_editor::templateName(request.tmpl)),
+                      false);
             break;
     }
     geometry_.reset();
@@ -371,7 +389,8 @@ void FixtureEditorPanel::requestSave() {
     std::string stem = fixtures::slugify(doc_.type().name);
     if (stem.empty()) stem = "fixture";
     const std::filesystem::path start = lastSaveDir_ / (stem + std::string(fixtures::kNativeFixtureExtension));
-    dialogs_.requestSave("Save fixture", start, {"DmxViz fixture (*.dmxviz-fixture.json)", "*.dmxviz-fixture.json", "All files", "*"});
+    dialogs_.requestSave("Save fixture", start,
+                         {"DmxViz fixture (*.dmxviz-fixture.json)", "*.dmxviz-fixture.json", "All files", "*"});
 }
 
 void FixtureEditorPanel::pollSaveDialog() {
@@ -387,7 +406,9 @@ void FixtureEditorPanel::pollSaveDialog() {
     // The file holds what the editor shows, applied or not.
     std::string error;
     if (fixtures::FixtureSerializer::saveFile(doc_.type(), path, &error)) {
-        setStatus(std::format("Saved {}{}", path.filename().string(), counts_.errors > 0 ? " (the fixture still has errors)" : ""), counts_.errors > 0);
+        setStatus(std::format("Saved {}{}", path.filename().string(),
+                              counts_.errors > 0 ? " (the fixture still has errors)" : ""),
+                  counts_.errors > 0);
     } else {
         setStatus("Cannot save: " + error, true);
     }

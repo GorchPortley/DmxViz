@@ -5,10 +5,12 @@
 // nodes, and "Make cells" (a row of beam cells for pixel bars). Right: the properties of the
 // selected node: name, type, position and rotation, model (built-in shape with size, or a mesh
 // file stored in the fixture), the Pan/Tilt channels that drive an Axis, and the optics of a Beam.
-// Edits that change the structure are executed after the tree was drawn, never while iterating it.
+// Below the node properties, "Geometry groups" lets one channel control several nodes (all pixels of
+// a bar). Edits that change the structure are executed after the tree was drawn, never while iterating it.
 
 #include "ui/FileDialogs.h"
 #include "ui/fixture_editor/EditDocument.h"
+#include "ui/fixture_editor/EditorWidgets.h"
 #include "ui/fixture_editor/GeometryEditing.h"
 
 #include <string>
@@ -38,6 +40,7 @@ private:
     bool drawAxis(fixtures::FixtureType& type, const fixtures::Geometry& node, int modeIndex);
     bool drawBeam(fixtures::Geometry& node);
     bool drawCellsPopup(fixtures::FixtureType& type, int modeIndex);
+    bool drawGroups(fixtures::FixtureType& type);
 
     bool runAction(fixtures::FixtureType& type, int modeIndex);
     void openCellsPopup(const fixtures::FixtureType& type);
@@ -59,10 +62,12 @@ private:
 
     // "Make cells" dialog.
     CellOptions cells_;
-    int cellDirection_ = 0;      // 0 = X, 1 = Y, 2 = Z
-    int cellChannels_ = 1;       // 0 none, 1 one shared RGB set, 2 RGB per cell
+    int cellDirection_ = 0;  // 0 = X, 1 = Y, 2 = Z
+    int cellChannels_ = 1;   // 0 none, 1 one shared RGB set, 2 RGB per cell
     bool cellWhite_ = false;
     bool cellsPopupRequested_ = false;
+
+    RenameField groupName_;
 
     FileDialogs dialogs_;
     NodePath importTarget_;

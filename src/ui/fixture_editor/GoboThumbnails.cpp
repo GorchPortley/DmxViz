@@ -68,9 +68,11 @@ void GoboThumbnails::draw(const fixtures::Resource* resource, float size) {
                     while (end < kGrid && entry.levels[static_cast<std::size_t>(gy * kGrid + end)] == level) ++end;
                     if (level > 0) {
                         const int grey = 255 * level / (kLevels - 1);
-                        list->AddRectFilled(ImVec2(origin.x + cell * static_cast<float>(gx), origin.y + cell * static_cast<float>(gy)),
-                                            ImVec2(origin.x + cell * static_cast<float>(end), origin.y + cell * static_cast<float>(gy + 1)),
-                                            IM_COL32(grey, grey, grey, 255));
+                        list->AddRectFilled(
+                            ImVec2(origin.x + cell * static_cast<float>(gx), origin.y + cell * static_cast<float>(gy)),
+                            ImVec2(origin.x + cell * static_cast<float>(end),
+                                   origin.y + cell * static_cast<float>(gy + 1)),
+                            IM_COL32(grey, grey, grey, 255));
                     }
                     gx = end;
                 }

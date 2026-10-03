@@ -8,10 +8,14 @@ namespace dmxviz::ui::fixture_editor {
 
 const char* ValidationSection::areaName(ProblemArea area) {
     switch (area) {
-        case ProblemArea::General: return "General";
-        case ProblemArea::Geometry: return "Geometry";
-        case ProblemArea::Wheels: return "Wheels";
-        case ProblemArea::Modes: return "Modes & Channels";
+        case ProblemArea::General:
+            return "General";
+        case ProblemArea::Geometry:
+            return "Geometry";
+        case ProblemArea::Wheels:
+            return "Wheels";
+        case ProblemArea::Modes:
+            return "Modes & Channels";
     }
     return "";
 }
@@ -22,9 +26,11 @@ std::optional<Problem> ValidationSection::draw(const std::vector<Problem>& probl
         ImGui::TextColored(okColor(), "No problems found.");
         return std::nullopt;
     }
-    ImGui::TextColored(counts.errors > 0 ? errorColor() : okColor(), "%d error%s", counts.errors, counts.errors == 1 ? "" : "s");
+    ImGui::TextColored(counts.errors > 0 ? errorColor() : okColor(), "%d error%s", counts.errors,
+                       counts.errors == 1 ? "" : "s");
     ImGui::SameLine();
-    ImGui::TextColored(counts.warnings > 0 ? warningColor() : okColor(), "%d warning%s", counts.warnings, counts.warnings == 1 ? "" : "s");
+    ImGui::TextColored(counts.warnings > 0 ? warningColor() : okColor(), "%d warning%s", counts.warnings,
+                       counts.warnings == 1 ? "" : "s");
     ImGui::SameLine();
     ImGui::TextDisabled("(errors block Apply; click a line to jump there)");
 

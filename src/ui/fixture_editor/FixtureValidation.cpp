@@ -103,7 +103,8 @@ void FixtureValidator::checkGeneral() {
         if (!std::all_of(type_.id.begin(), type_.id.end(), isValidIdChar))
             add(Severity::Error, place, "The id may only contain a-z, 0-9, '-', '_', '.' and '/'.");
         if (options_.idTaken && options_.idTaken(type_.id))
-            add(Severity::Error, place, std::format("The id \"{}\" is already used by another fixture in the library.", type_.id));
+            add(Severity::Error, place,
+                std::format("The id \"{}\" is already used by another fixture in the library.", type_.id));
     }
 
     for (std::size_t i = 0; i < type_.emitters.size(); ++i) {
@@ -135,8 +136,10 @@ void FixtureValidator::checkGeometry() {
         place.geometry = g.name;
         place.where = std::format("Geometry {}", nameOrPlaceholder(g.name, "(unnamed)"));
 
-        if (g.name.empty()) add(Severity::Error, place, "A geometry node has no name.");
-        else if (!names.insert(g.name).second) add(Severity::Error, place, "Another node has the same name.");
+        if (g.name.empty())
+            add(Severity::Error, place, "A geometry node has no name.");
+        else if (!names.insert(g.name).second)
+            add(Severity::Error, place, "Another node has the same name.");
 
         if (!g.model.mesh.empty() && type_.findResource(g.model.mesh) == nullptr)
             add(Severity::Error, place, std::format("The mesh resource \"{}\" does not exist.", g.model.mesh));
@@ -190,8 +193,10 @@ void FixtureValidator::checkWheels() {
         wheelPlace.wheel = static_cast<int>(w);
         wheelPlace.where = std::format("Wheel {}", nameOrPlaceholder(wheel.name, "(unnamed)"));
 
-        if (wheel.name.empty()) add(Severity::Error, wheelPlace, "The wheel has no name.");
-        else if (!wheelNames.insert(wheel.name).second) add(Severity::Error, wheelPlace, "Another wheel has the same name.");
+        if (wheel.name.empty())
+            add(Severity::Error, wheelPlace, "The wheel has no name.");
+        else if (!wheelNames.insert(wheel.name).second)
+            add(Severity::Error, wheelPlace, "Another wheel has the same name.");
         if (wheel.slots.empty()) add(Severity::Error, wheelPlace, "A wheel needs at least one slot.");
         if (!wheel.name.empty() && !usedWheels.contains(wheel.name))
             add(Severity::Warning, wheelPlace, "No channel function uses this wheel, so it has no effect.");
@@ -199,7 +204,8 @@ void FixtureValidator::checkWheels() {
         for (std::size_t s = 0; s < wheel.slots.size(); ++s) {
             const fixtures::WheelSlot& slot = wheel.slots[s];
             Place place = wheelPlace;
-            place.where = std::format("Wheel {}, slot {} ({})", nameOrPlaceholder(wheel.name, "(unnamed)"), s + 1, slot.name);
+            place.where =
+                std::format("Wheel {}, slot {} ({})", nameOrPlaceholder(wheel.name, "(unnamed)"), s + 1, slot.name);
             if (!slot.image.empty() && type_.findResource(slot.image) == nullptr)
                 add(Severity::Error, place, std::format("The image resource \"{}\" does not exist.", slot.image));
             if (slot.facets.size() > static_cast<std::size_t>(kMaxPrismFacets))
@@ -243,9 +249,11 @@ void FixtureValidator::checkMode(std::size_t modeIndex) {
     const int highest = mode.highestOffset();
     if (mode.footprint < highest)
         add(Severity::Error, place,
-            std::format("The footprint ({}) is smaller than the highest channel offset ({}).", mode.footprint, highest));
+            std::format("The footprint ({}) is smaller than the highest channel offset ({}).", mode.footprint,
+                        highest));
     if (mode.footprint > kMaxFootprint)
-        add(Severity::Error, place, std::format("The footprint ({}) is larger than a universe ({}).", mode.footprint, kMaxFootprint));
+        add(Severity::Error, place,
+            std::format("The footprint ({}) is larger than a universe ({}).", mode.footprint, kMaxFootprint));
     if (mode.channels.empty()) add(Severity::Warning, place, "The mode has no channels.");
     if (!mode.geometryRoot.empty() && type_.findGeometry(mode.geometryRoot) == nullptr)
         add(Severity::Error, place, std::format("The geometry root \"{}\" does not exist.", mode.geometryRoot));
@@ -280,7 +288,8 @@ void FixtureValidator::checkOffsets(std::size_t modeIndex) {
                 add(Severity::Error, place, std::format("Offset {} is listed twice.", offset));
             else
                 add(Severity::Error, place,
-                    std::format("Offset {} overlaps channel {}.", offset, nameOrPlaceholder(mode.channels[it->second].name, "(unnamed)")));
+                    std::format("Offset {} overlaps channel {}.", offset,
+                                nameOrPlaceholder(mode.channels[it->second].name, "(unnamed)")));
         }
     }
 }
@@ -304,11 +313,14 @@ void FixtureValidator::checkChannel(std::size_t modeIndex, std::size_t channelIn
 
     const std::uint32_t max = channel.maxValue();
     if (channel.defaultValue > max)
-        add(Severity::Error, place, std::format("The default value {} is above the channel maximum {}.", channel.defaultValue, max));
+        add(Severity::Error, place,
+            std::format("The default value {} is above the channel maximum {}.", channel.defaultValue, max));
     if (channel.highlightValue && *channel.highlightValue > max)
-        add(Severity::Error, place, std::format("The highlight value {} is above the channel maximum {}.", *channel.highlightValue, max));
+        add(Severity::Error, place,
+            std::format("The highlight value {} is above the channel maximum {}.", *channel.highlightValue, max));
 
-    if (!channel.geometry.empty() && type_.findGeometry(channel.geometry) == nullptr && type_.findGroup(channel.geometry) == nullptr)
+    if (!channel.geometry.empty() && type_.findGeometry(channel.geometry) == nullptr &&
+        type_.findGroup(channel.geometry) == nullptr)
         add(Severity::Error, place, std::format("The geometry \"{}\" does not exist.", channel.geometry));
 
     if (channel.functions.empty()) add(Severity::Warning, place, "The channel has no functions, so it does nothing.");
@@ -317,8 +329,9 @@ void FixtureValidator::checkChannel(std::size_t modeIndex, std::size_t channelIn
                                        [](const ChannelFunction& f) { return isAxisAttribute(f.attribute); });
     if (movesAxis && channelAxes(type_, channel).empty()) {
         add(Severity::Warning, place,
-            channel.geometry.empty() ? std::string("Pan/Tilt functions need an Axis node in the geometry tree.")
-                                     : std::format("Pan/Tilt functions need an Axis node at or below \"{}\".", channel.geometry));
+            channel.geometry.empty()
+                ? std::string("Pan/Tilt functions need an Axis node in the geometry tree.")
+                : std::format("Pan/Tilt functions need an Axis node at or below \"{}\".", channel.geometry));
     }
 
     checkFunctions(modeIndex, channelIndex);
@@ -362,8 +375,8 @@ void FixtureValidator::checkFunctions(std::size_t modeIndex, std::size_t channel
                 const float limit = static_cast<float>(wheel->slots.size()) + 1.0f;
                 if (f.slotFrom < 0.0f || f.slotTo < 0.0f || f.slotFrom > limit || f.slotTo > limit)
                     add(Severity::Warning, place,
-                        std::format("The slot range {}..{} is outside wheel {} ({} slots).", f.slotFrom, f.slotTo, f.wheel,
-                                    wheel->slots.size()));
+                        std::format("The slot range {}..{} is outside wheel {} ({} slots).", f.slotFrom, f.slotTo,
+                                    f.wheel, wheel->slots.size()));
             }
         } else if (!f.wheel.empty() && type_.findWheel(f.wheel) == nullptr) {
             add(Severity::Error, place, std::format("The wheel \"{}\" does not exist.", f.wheel));
@@ -377,7 +390,8 @@ void FixtureValidator::checkFunctions(std::size_t modeIndex, std::size_t channel
             add(Severity::Error, place, std::format("The mode master range {}..{} is reversed.", f.modeFrom, f.modeTo));
         for (const fixtures::ChannelSet& set : f.sets) {
             if (set.dmxFrom > set.dmxTo || set.dmxTo > max)
-                add(Severity::Warning, place, std::format("The set \"{}\" has an invalid DMX range {}..{}.", set.name, set.dmxFrom, set.dmxTo));
+                add(Severity::Warning, place,
+                    std::format("The set \"{}\" has an invalid DMX range {}..{}.", set.name, set.dmxFrom, set.dmxTo));
         }
     }
 
@@ -396,7 +410,8 @@ void FixtureValidator::checkFunctionRanges(const Place& channelPlace, const Chan
     };
     std::vector<Span> spans;
     for (const ChannelFunction& f : channel.functions)
-        if (f.dmxFrom <= f.dmxTo) spans.push_back({f.dmxFrom, std::min<std::uint64_t>(f.dmxTo, channel.maxValue()), &f});
+        if (f.dmxFrom <= f.dmxTo)
+            spans.push_back({f.dmxFrom, std::min<std::uint64_t>(f.dmxTo, channel.maxValue()), &f});
     if (spans.empty()) return;
     std::stable_sort(spans.begin(), spans.end(), [](const Span& a, const Span& b) { return a.from < b.from; });
 

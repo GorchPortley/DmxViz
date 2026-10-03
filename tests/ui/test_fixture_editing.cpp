@@ -48,7 +48,8 @@ TEST_CASE("fixture editor templates: survive a save and load as native JSON") {
         CAPTURE(templateName(kind));
         const fixtures::FixtureType original = makeTemplateFixture(kind);
         std::string error;
-        const auto loaded = fixtures::FixtureSerializer::fromString(fixtures::FixtureSerializer::toString(original), {}, &error);
+        const auto loaded =
+            fixtures::FixtureSerializer::fromString(fixtures::FixtureSerializer::toString(original), {}, &error);
         REQUIRE_MESSAGE(loaded.has_value(), error);
         CHECK(validateFixture(*loaded).empty());
         CHECK(loaded->modes.front().channels.size() == original.modes.front().channels.size());
@@ -78,7 +79,7 @@ TEST_CASE("geometry editing: add, move and remove nodes") {
 
     CHECK(removeNode(type, path));
     CHECK(type.geometry.children.size() == 2);
-    CHECK_FALSE(removeNode(type, {}));      // the root stays
+    CHECK_FALSE(removeNode(type, {}));  // the root stays
     CHECK_FALSE(addChildNode(type, {7, 7}, GeometryType::Generic).has_value());
 }
 
@@ -137,7 +138,7 @@ TEST_CASE("geometry editing: which attribute drives an axis") {
     CHECK(head.front().attribute == Attribute::Tilt);
 
     CHECK(axisDrives(type, mode, "Base").empty());
-    CHECK(channelAxes(type, *mode.findChannel("Dimmer")).empty());  // the Beam node has no axis below it
+    CHECK(channelAxes(type, *mode.findChannel("Dimmer")).empty());   // the Beam node has no axis below it
     CHECK(channelAxes(type, *mode.findChannel("Pan")).size() == 2);  // Yoke first (pan), then Head (tilt)
 }
 
@@ -247,7 +248,7 @@ TEST_CASE("channel editing: closing gaps between functions") {
     closeFunctionGaps(channel);
 
     REQUIRE(channel.functions.size() == 3);
-    CHECK(channel.functions[0].dmxFrom == 0);    // sorted by start, the first one starts at 0
+    CHECK(channel.functions[0].dmxFrom == 0);  // sorted by start, the first one starts at 0
     CHECK(channel.functions[0].dmxTo == 99);
     CHECK(channel.functions[1].dmxFrom == 100);
     CHECK(channel.functions[1].dmxTo == 199);

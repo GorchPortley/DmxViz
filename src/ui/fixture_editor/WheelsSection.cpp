@@ -40,18 +40,23 @@ bool WheelsSection::draw(EditDocument& doc) {
     fixtures::FixtureType& type = doc.type();
     bool changed = false;
     pollImageImport(type, changed);
-    if (type.wheels.empty()) selectedWheel_ = 0;
-    else selectedWheel_ = std::clamp(selectedWheel_, 0, static_cast<int>(type.wheels.size()) - 1);
+    if (type.wheels.empty())
+        selectedWheel_ = 0;
+    else
+        selectedWheel_ = std::clamp(selectedWheel_, 0, static_cast<int>(type.wheels.size()) - 1);
 
     const float listWidth = std::clamp(ImGui::GetContentRegionAvail().x * 0.25f, 130.0f, 220.0f);
-    if (ImGui::BeginChild("##wheelList", ImVec2(listWidth, 0.0f), ImGuiChildFlags_Borders)) changed |= drawWheelList(type);
+    if (ImGui::BeginChild("##wheelList", ImVec2(listWidth, 0.0f), ImGuiChildFlags_Borders))
+        changed |= drawWheelList(type);
     ImGui::EndChild();
     ImGui::SameLine();
     // The list may have removed a wheel just now: keep the selection inside the list.
     selectedWheel_ = type.wheels.empty() ? 0 : std::clamp(selectedWheel_, 0, static_cast<int>(type.wheels.size()) - 1);
     if (ImGui::BeginChild("##wheelSlots", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders)) {
-        if (type.wheels.empty()) ImGui::TextDisabled("This fixture has no wheels. Add one on the left.");
-        else changed |= drawWheel(type, static_cast<std::size_t>(selectedWheel_));
+        if (type.wheels.empty())
+            ImGui::TextDisabled("This fixture has no wheels. Add one on the left.");
+        else
+            changed |= drawWheel(type, static_cast<std::size_t>(selectedWheel_));
     }
     ImGui::EndChild();
     return changed;
@@ -84,7 +89,8 @@ bool WheelsSection::drawWheelList(fixtures::FixtureType& type) {
     ImGui::SameLine();
     ImGui::BeginDisabled(selectedWheel_ <= 0);
     if (ImGui::SmallButton("Up")) {
-        std::swap(type.wheels[static_cast<std::size_t>(selectedWheel_)], type.wheels[static_cast<std::size_t>(selectedWheel_ - 1)]);
+        std::swap(type.wheels[static_cast<std::size_t>(selectedWheel_)],
+                  type.wheels[static_cast<std::size_t>(selectedWheel_ - 1)]);
         --selectedWheel_;
         changed = true;
     }
@@ -92,7 +98,8 @@ bool WheelsSection::drawWheelList(fixtures::FixtureType& type) {
     ImGui::SameLine();
     ImGui::BeginDisabled(selectedWheel_ + 1 >= static_cast<int>(type.wheels.size()));
     if (ImGui::SmallButton("Down")) {
-        std::swap(type.wheels[static_cast<std::size_t>(selectedWheel_)], type.wheels[static_cast<std::size_t>(selectedWheel_ + 1)]);
+        std::swap(type.wheels[static_cast<std::size_t>(selectedWheel_)],
+                  type.wheels[static_cast<std::size_t>(selectedWheel_ + 1)]);
         ++selectedWheel_;
         changed = true;
     }
@@ -102,8 +109,10 @@ bool WheelsSection::drawWheelList(fixtures::FixtureType& type) {
     for (std::size_t i = 0; i < type.wheels.size(); ++i) {
         ImGui::PushID(static_cast<int>(i));
         const Wheel& wheel = type.wheels[i];
-        const std::string label = std::format("{} ({})", wheel.name.empty() ? "(unnamed)" : wheel.name, wheel.slots.size());
-        if (ImGui::Selectable(label.c_str(), static_cast<int>(i) == selectedWheel_)) selectedWheel_ = static_cast<int>(i);
+        const std::string label =
+            std::format("{} ({})", wheel.name.empty() ? "(unnamed)" : wheel.name, wheel.slots.size());
+        if (ImGui::Selectable(label.c_str(), static_cast<int>(i) == selectedWheel_))
+            selectedWheel_ = static_cast<int>(i);
         ImGui::PopID();
     }
     return changed;
@@ -129,13 +138,16 @@ bool WheelsSection::drawWheel(fixtures::FixtureType& type, std::size_t wheelInde
     ImGui::InputText("Wheel name", &nameEdit_);
     if (nameTaken) ImGui::PopStyleColor();
     if (ImGui::IsItemDeactivatedAfterEdit()) {
-        if (!nameTaken && renameWheel(type, wheelIndex, nameEdit_)) changed = true;
-        else nameEdit_ = wheel.name;
+        if (!nameTaken && renameWheel(type, wheelIndex, nameEdit_))
+            changed = true;
+        else
+            nameEdit_ = wheel.name;
     }
     ImGui::SetItemTooltip("Channel functions refer to the wheel by name; renaming updates them.");
 
-    const ImGuiTableFlags tableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit |
-                                       ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
+    const ImGuiTableFlags tableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH |
+                                       ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollX |
+                                       ImGuiTableFlags_ScrollY;
     const float footer = ImGui::GetFrameHeightWithSpacing() * 2.0f;
     if (ImGui::BeginTable("##slots", 5, tableFlags, ImVec2(0.0f, -footer))) {
         ImGui::TableSetupScrollFreeze(0, 1);
@@ -198,11 +210,20 @@ bool WheelsSection::drawSlotRow(fixtures::FixtureType& type, Wheel& wheel, std::
 
     ImGui::TableSetColumnIndex(3);
     switch (slot.kind) {
-        case SlotKind::Open: ImGui::TextDisabled("Light passes"); break;
-        case SlotKind::Color: changed |= colorEditLinear("##color", slot.color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel); break;
+        case SlotKind::Open:
+            ImGui::TextDisabled("Light passes");
+            break;
+        case SlotKind::Color:
+            changed |= colorEditLinear("##color", slot.color,
+                                       ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel);
+            break;
         case SlotKind::Gobo:
-        case SlotKind::AnimationWheel: changed |= drawImageSlot(type, slot, slotIndex); break;
-        case SlotKind::Prism: changed |= drawPrismSlot(slot); break;
+        case SlotKind::AnimationWheel:
+            changed |= drawImageSlot(type, slot, slotIndex);
+            break;
+        case SlotKind::Prism:
+            changed |= drawPrismSlot(slot);
+            break;
         case SlotKind::Frost:
             ImGui::SetNextItemWidth(160.0f);
             changed |= ImGui::SliderFloat("##frost", &slot.frost, 0.0f, 1.0f, "frost %.2f");
@@ -252,25 +273,28 @@ bool WheelsSection::drawImageSlot(fixtures::FixtureType& type, WheelSlot& slot, 
     if (ImGui::SmallButton("Import...")) {
         importWheel_ = selectedWheel_;
         importSlot_ = static_cast<int>(slotIndex);
-        dialogs_.requestOpen("Import gobo image", lastImportDir_, {"Images (PNG, JPG, SVG)", "*.png *.jpg *.jpeg *.svg", "All files", "*"});
+        dialogs_.requestOpen("Import gobo image", lastImportDir_,
+                             {"Images (PNG, JPG, SVG)", "*.png *.jpg *.jpeg *.svg", "All files", "*"});
     }
     ImGui::EndDisabled();
-    ImGui::SetItemTooltip(FileDialogs::available() ? "White passes the light, black blocks it. The file is stored in the fixture."
-                                                   : "No file dialog available (on Linux install zenity or kdialog).");
+    ImGui::SetItemTooltip(FileDialogs::available()
+                              ? "White passes the light, black blocks it. The file is stored in the fixture."
+                              : "No file dialog available (on Linux install zenity or kdialog).");
     ImGui::EndGroup();
     return changed;
 }
 
 bool WheelsSection::drawPrismSlot(WheelSlot& slot) {
     bool changed = false;
-    if (ImGui::TreeNodeEx("##facets", ImGuiTreeNodeFlags_SpanAvailWidth, "%d facet%s", static_cast<int>(slot.facets.size()),
-                          slot.facets.size() == 1 ? "" : "s")) {
+    if (ImGui::TreeNodeEx("##facets", ImGuiTreeNodeFlags_SpanAvailWidth, "%d facet%s",
+                          static_cast<int>(slot.facets.size()), slot.facets.size() == 1 ? "" : "s")) {
         ImGui::SetNextItemWidth(90.0f);
         ImGui::InputInt("Count", &facetCount_);
         facetCount_ = std::clamp(facetCount_, 1, kMaxPrismFacets);
         ImGui::SetNextItemWidth(90.0f);
         ImGui::DragFloat("Spread", &facetSpreadDegrees_, 0.1f, 0.1f, 60.0f, "%.1f deg");
-        ImGui::SetItemTooltip("Circular: angle between each sub-beam and the main axis.\nLinear: angle between neighbouring sub-beams.");
+        ImGui::SetItemTooltip(
+            "Circular: angle between each sub-beam and the main axis.\nLinear: angle between neighbouring sub-beams.");
         ImGui::SetNextItemWidth(110.0f);
         comboIndex("Pattern", facetPattern_, kPatternNames);
         if (ImGui::SmallButton("Generate")) {
@@ -316,7 +340,9 @@ bool WheelsSection::runSlotAction(Wheel& wheel) {
     pending_ = Action::None;
     if (action == Action::None || pendingSlot_ >= wheel.slots.size()) return false;
     switch (action) {
-        case Action::RemoveSlot: wheel.slots.erase(wheel.slots.begin() + static_cast<std::ptrdiff_t>(pendingSlot_)); return true;
+        case Action::RemoveSlot:
+            wheel.slots.erase(wheel.slots.begin() + static_cast<std::ptrdiff_t>(pendingSlot_));
+            return true;
         case Action::SlotUp:
             if (pendingSlot_ == 0) return false;
             std::swap(wheel.slots[pendingSlot_], wheel.slots[pendingSlot_ - 1]);
@@ -325,7 +351,8 @@ bool WheelsSection::runSlotAction(Wheel& wheel) {
             if (pendingSlot_ + 1 >= wheel.slots.size()) return false;
             std::swap(wheel.slots[pendingSlot_], wheel.slots[pendingSlot_ + 1]);
             return true;
-        case Action::None: break;
+        case Action::None:
+            break;
     }
     return false;
 }

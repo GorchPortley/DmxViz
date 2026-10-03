@@ -9,6 +9,7 @@
 
 #include "imgui.h"
 
+#include <optional>
 #include <span>
 #include <string>
 
@@ -41,6 +42,20 @@ public:
 
 private:
     std::string filter_;
+};
+
+// A text field for a name that other data refers to (emitters, groups). The user types freely and
+// the new name is only handed back when the field is left, so a half-typed name never breaks a
+// reference. One field object can serve many rows: it remembers which ImGui item is being edited.
+class RenameField {
+public:
+    // Draws the field showing `current`. Returns the new text once editing finished and it differs
+    // from `current` (the caller decides whether it is acceptable and renames); else nothing.
+    std::optional<std::string> draw(const char* label, const std::string& current, float width = 0.0f);
+
+private:
+    ImGuiID editedId_ = 0;
+    std::string text_;
 };
 
 // A small "?" with a tooltip, for hints that would clutter the layout.

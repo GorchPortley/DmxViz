@@ -24,9 +24,12 @@ std::set<std::string, std::less<>> usedNames(const fixtures::FixtureType& type) 
 
 const char* defaultNodeName(GeometryType kind) {
     switch (kind) {
-        case GeometryType::Generic: return "Generic";
-        case GeometryType::Axis: return "Axis";
-        case GeometryType::Beam: return "Beam";
+        case GeometryType::Generic:
+            return "Generic";
+        case GeometryType::Axis:
+            return "Axis";
+        case GeometryType::Beam:
+            return "Beam";
     }
     return "Node";
 }
@@ -44,7 +47,8 @@ Geometry makeNode(const fixtures::FixtureType& type, GeometryType kind) {
             node.model.primitive = PrimitiveShape::Cylinder;
             node.model.size = glm::vec3(0.1f);
             break;
-        case GeometryType::Beam: break;  // a beam draws its own lens
+        case GeometryType::Beam:
+            break;  // a beam draws its own lens
     }
     return node;
 }
@@ -193,12 +197,15 @@ bool isAxisAttribute(Attribute attribute) {
         case AttributeFamily::Pan:
         case AttributeFamily::Tilt:
         case AttributeFamily::PanRotate:
-        case AttributeFamily::TiltRotate: return true;
-        default: return false;
+        case AttributeFamily::TiltRotate:
+            return true;
+        default:
+            return false;
     }
 }
 
-std::vector<const fixtures::Geometry*> channelAxes(const fixtures::FixtureType& type, const fixtures::Channel& channel) {
+std::vector<const fixtures::Geometry*> channelAxes(const fixtures::FixtureType& type,
+                                                   const fixtures::Channel& channel) {
     std::vector<const Geometry*> roots;
     if (channel.geometry.empty()) {
         roots.push_back(&type.geometry);

@@ -46,7 +46,8 @@ void setIdentity(FixtureType& type, const char* name, const char* shortName, con
     type.id = fixtures::makeFixtureId(type.manufacturer, type.name);
 }
 
-Channel& add(DmxMode& mode, const char* name, Attribute attribute, int bytes, const char* geometry, std::uint32_t defaultValue = 0) {
+Channel& add(DmxMode& mode, const char* name, Attribute attribute, int bytes, const char* geometry,
+             std::uint32_t defaultValue = 0) {
     Channel& channel = appendChannel(mode, makeChannel(name, attribute, bytes, 1, geometry));
     channel.defaultValue = defaultValue;
     return channel;
@@ -162,8 +163,11 @@ FixtureType makeMovingHead() {
     const struct {
         const char* name;
         glm::vec3 color;
-    } filters[] = {{"Red", {1.0f, 0.03f, 0.03f}},     {"Green", {0.03f, 0.8f, 0.05f}}, {"Blue", {0.03f, 0.08f, 1.0f}},
-                   {"Yellow", {1.0f, 0.7f, 0.02f}},   {"Magenta", {0.9f, 0.03f, 0.6f}}};
+    } filters[] = {{"Red", {1.0f, 0.03f, 0.03f}},
+                   {"Green", {0.03f, 0.8f, 0.05f}},
+                   {"Blue", {0.03f, 0.08f, 1.0f}},
+                   {"Yellow", {1.0f, 0.7f, 0.02f}},
+                   {"Magenta", {0.9f, 0.03f, 0.6f}}};
     for (const auto& filter : filters) {
         fixtures::WheelSlot slot = makeSlot(SlotKind::Color, 1);
         slot.name = filter.name;
@@ -215,18 +219,24 @@ FixtureType makeMovingHead() {
 
 const char* templateName(FixtureTemplate kind) {
     switch (kind) {
-        case FixtureTemplate::Blank: return "Blank";
-        case FixtureTemplate::LedPar: return "LED par";
-        case FixtureTemplate::MovingHead: return "Moving head";
+        case FixtureTemplate::Blank:
+            return "Blank";
+        case FixtureTemplate::LedPar:
+            return "LED par";
+        case FixtureTemplate::MovingHead:
+            return "Moving head";
     }
     return "Blank";
 }
 
 FixtureType makeTemplateFixture(FixtureTemplate kind) {
     switch (kind) {
-        case FixtureTemplate::Blank: return makeBlank();
-        case FixtureTemplate::LedPar: return makeLedPar();
-        case FixtureTemplate::MovingHead: return makeMovingHead();
+        case FixtureTemplate::Blank:
+            return makeBlank();
+        case FixtureTemplate::LedPar:
+            return makeLedPar();
+        case FixtureTemplate::MovingHead:
+            return makeMovingHead();
     }
     return makeBlank();
 }

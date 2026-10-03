@@ -32,9 +32,12 @@ constexpr const char* kCellChannelNames[] = {"No channels", "One RGB set for all
 
 const char* typeIcon(GeometryType type) {
     switch (type) {
-        case GeometryType::Generic: return "[G]";
-        case GeometryType::Axis: return "[A]";
-        case GeometryType::Beam: return "[B]";
+        case GeometryType::Generic:
+            return "[G]";
+        case GeometryType::Axis:
+            return "[A]";
+        case GeometryType::Beam:
+            return "[B]";
     }
     return "[?]";
 }
@@ -79,6 +82,8 @@ bool GeometrySection::draw(EditDocument& doc, int modeIndex) {
     ImGui::SameLine();
     if (ImGui::BeginChild("##geometryProperties", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders)) {
         changed |= drawProperties(doc, modeIndex);
+        ImGui::Spacing();
+        changed |= drawGroups(doc.type());
     }
     ImGui::EndChild();
 
@@ -121,12 +126,14 @@ void GeometrySection::drawToolbar(const fixtures::FixtureType& type) {
 }
 
 void GeometrySection::drawTreeNode(const Geometry& node, NodePath& path) {
-    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_DefaultOpen;
+    ImGuiTreeNodeFlags flags =
+        ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_DefaultOpen;
     if (node.children.empty()) flags |= ImGuiTreeNodeFlags_Leaf;
     if (path == selected_) flags |= ImGuiTreeNodeFlags_Selected;
 
     char label[160];
-    std::snprintf(label, sizeof(label), "%s %s###node", typeIcon(node.type), node.name.empty() ? "(unnamed)" : node.name.c_str());
+    std::snprintf(label, sizeof(label), "%s %s###node", typeIcon(node.type),
+                  node.name.empty() ? "(unnamed)" : node.name.c_str());
     const bool open = ImGui::TreeNodeEx(label, flags);
     if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) selected_ = path;
     if (ImGui::BeginPopupContextItem()) {
@@ -158,7 +165,8 @@ bool GeometrySection::runAction(fixtures::FixtureType& type, int modeIndex) {
     const Action action = pending_;
     pending_ = Action::None;
     switch (action) {
-        case Action::None: return false;
+        case Action::None:
+            return false;
         case Action::AddGeneric:
         case Action::AddAxis:
         case Action::AddBeam: {
@@ -174,9 +182,13 @@ bool GeometrySection::runAction(fixtures::FixtureType& type, int modeIndex) {
             selected_.pop_back();  // the parent
             return true;
         }
-        case Action::MoveUp: return moveNode(type, selected_, -1);
-        case Action::MoveDown: return moveNode(type, selected_, +1);
-        case Action::MakeCells: openCellsPopup(type); return false;
+        case Action::MoveUp:
+            return moveNode(type, selected_, -1);
+        case Action::MoveDown:
+            return moveNode(type, selected_, +1);
+        case Action::MakeCells:
+            openCellsPopup(type);
+            return false;
     }
     return false;
 }
@@ -227,7 +239,8 @@ bool GeometrySection::drawName(fixtures::FixtureType& type, Geometry& node) {
         nameEditSource_ = node.name;
         nameEditPath_ = selected_;
     }
-    const bool valid = !nameEdit_.empty() && (nameEdit_ == node.name || uniqueGeometryName(type, nameEdit_) == nameEdit_);
+    const bool valid =
+        !nameEdit_.empty() && (nameEdit_ == node.name || uniqueGeometryName(type, nameEdit_) == nameEdit_);
     if (!valid) ImGui::PushStyleColor(ImGuiCol_Text, errorColor());
     ImGui::InputText("Name", &nameEdit_);
     if (!valid) ImGui::PopStyleColor();
@@ -268,7 +281,8 @@ bool GeometrySection::drawModel(fixtures::FixtureType& type, Geometry& node) {
     if (comboIndex("Shape", shape, kShapeNames)) {
         model.primitive = static_cast<fixtures::PrimitiveShape>(shape);
         // A new visible shape without size would be invisible: start from a handy size.
-        if (model.primitive != fixtures::PrimitiveShape::None && model.size == glm::vec3(0.0f)) model.size = glm::vec3(0.1f);
+        if (model.primitive != fixtures::PrimitiveShape::None && model.size == glm::vec3(0.0f))
+            model.size = glm::vec3(0.1f);
         changed = true;
     }
     ImGui::SetItemTooltip("Drawn when there is no mesh file (or it cannot be loaded).");
@@ -295,7 +309,8 @@ bool GeometrySection::drawModel(fixtures::FixtureType& type, Geometry& node) {
     ImGui::BeginDisabled(!FileDialogs::available() || dialogs_.busy());
     if (ImGui::SmallButton("Import mesh file...")) {
         importTarget_ = selected_;
-        dialogs_.requestOpen("Import 3D model", lastImportDir_, {"3D models (GLB, OBJ, 3DS)", "*.glb *.gltf *.obj *.3ds", "All files", "*"});
+        dialogs_.requestOpen("Import 3D model", lastImportDir_,
+                             {"3D models (GLB, OBJ, 3DS)", "*.glb *.gltf *.obj *.3ds", "All files", "*"});
     }
     ImGui::EndDisabled();
     ImGui::SetItemTooltip("Stores the file in the fixture. Prefer .glb: a .gltf needs to be self-contained.");
@@ -315,8 +330,9 @@ bool GeometrySection::drawAxis(fixtures::FixtureType& type, const Geometry& node
         ImGui::TextColored(warningColor(), "Not driven by any channel in mode \"%s\".", mode.name.c_str());
     } else {
         for (const AxisDrive& drive : drives)
-            ImGui::BulletText("%s, by channel \"%s\" (mode \"%s\")", std::string(fixtures::attributeName(drive.attribute)).c_str(),
-                              drive.channel.c_str(), mode.name.c_str());
+            ImGui::BulletText("%s, by channel \"%s\" (mode \"%s\")",
+                              std::string(fixtures::attributeName(drive.attribute)).c_str(), drive.channel.c_str(),
+                              mode.name.c_str());
     }
 
     auto addChannel = [&](Attribute attribute, const char* name) {
@@ -330,8 +346,9 @@ bool GeometrySection::drawAxis(fixtures::FixtureType& type, const Geometry& node
     if (ImGui::SmallButton("Add Pan channel")) addChannel(Attribute::Pan, "Pan");
     ImGui::SameLine();
     if (ImGui::SmallButton("Add Tilt channel")) addChannel(Attribute::Tilt, "Tilt");
-    ImGui::SetItemTooltip("Adds a 16-bit channel to the selected mode that controls this node. Pan turns the first axis\n"
-                          "below the channel's node, Tilt the second one (or the same if there is only one).");
+    ImGui::SetItemTooltip(
+        "Adds a 16-bit channel to the selected mode that controls this node. Pan turns the first axis\n"
+        "below the channel's node, Tilt the second one (or the same if there is only one).");
     return changed;
 }
 
@@ -364,10 +381,61 @@ bool GeometrySection::drawBeam(Geometry& node) {
     changed |= ImGui::DragFloat("Color temperature", &beam.colorTemperature, 25.0f, 1500.0f, 12000.0f, "%.0f K");
     ImGui::SameLine();
     const glm::vec3 white = linearToSrgb(fixtures::kelvinToLinear(beam.colorTemperature));
-    ImGui::ColorButton("##kelvin", ImVec4(white.x, white.y, white.z, 1.0f), ImGuiColorEditFlags_NoTooltip, ImVec2(18.0f, 18.0f));
+    ImGui::ColorButton("##kelvin", ImVec4(white.x, white.y, white.z, 1.0f), ImGuiColorEditFlags_NoTooltip,
+                       ImVec2(18.0f, 18.0f));
 
     if (beam.type == fixtures::BeamType::Rectangle)
         changed |= ImGui::DragFloat2("Emitter size", &beam.emitterSize.x, 0.002f, 0.001f, 5.0f, "%.3f m");
+    return changed;
+}
+
+// ---------------------------------------------------------------------------
+// Groups
+
+bool GeometrySection::drawGroups(fixtures::FixtureType& type) {
+    if (!ImGui::CollapsingHeader("Geometry groups")) return false;
+    bool changed = false;
+    ImGui::TextDisabled("A group lets one channel control several nodes, e.g. all pixels of a bar.");
+
+    int removeIndex = -1;
+    for (std::size_t g = 0; g < type.geometryGroups.size(); ++g) {
+        ImGui::PushID(static_cast<int>(g));
+        fixtures::GeometryGroup& group = type.geometryGroups[g];
+        if (const std::optional<std::string> name = groupName_.draw("##groupName", group.name, 150.0f)) {
+            if (renameGroup(type, g, *name)) changed = true;
+        }
+        ImGui::SameLine();
+        ImGui::Text("%d node%s", static_cast<int>(group.members.size()), group.members.size() == 1 ? "" : "s");
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Members...")) ImGui::OpenPopup("members");
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Remove")) removeIndex = static_cast<int>(g);
+
+        if (ImGui::BeginPopup("members")) {
+            ImGui::TextDisabled("Nodes in \"%s\"", group.name.c_str());
+            fixtures::forEachGeometry(type.geometry, [&](const Geometry& node, const Geometry*) {
+                auto it = std::find(group.members.begin(), group.members.end(), node.name);
+                bool member = it != group.members.end();
+                if (ImGui::Checkbox(node.name.c_str(), &member)) {
+                    if (member)
+                        group.members.push_back(node.name);
+                    else
+                        group.members.erase(it);
+                    changed = true;
+                }
+            });
+            ImGui::EndPopup();
+        }
+        ImGui::PopID();
+    }
+    if (removeIndex >= 0) {
+        type.geometryGroups.erase(type.geometryGroups.begin() + removeIndex);
+        changed = true;
+    }
+    if (ImGui::SmallButton("Add group")) {
+        addGroup(type);
+        changed = true;
+    }
     return changed;
 }
 
@@ -416,7 +484,8 @@ bool GeometrySection::drawCellsPopup(fixtures::FixtureType& type, int modeIndex)
     ImGui::DragFloat("Pitch", &cells_.pitch, 0.001f, 0.001f, 5.0f, "%.3f m");
     ImGui::SetItemTooltip("Distance between the centres of two cells.");
     if (comboIndex("Row direction", cellDirection_, kDirectionNames)) {
-        cells_.axis = glm::vec3(cellDirection_ == 0 ? 1.0f : 0.0f, cellDirection_ == 1 ? 1.0f : 0.0f, cellDirection_ == 2 ? 1.0f : 0.0f);
+        cells_.axis = glm::vec3(cellDirection_ == 0 ? 1.0f : 0.0f, cellDirection_ == 1 ? 1.0f : 0.0f,
+                                cellDirection_ == 2 ? 1.0f : 0.0f);
     }
     dragVec3("Row centre", cells_.centre, 0.001f, -20.0f, 20.0f, "%.3f m");
     ImGui::SetItemTooltip("Centre of the row, relative to the selected node. Cells shine along -Y.");
@@ -433,7 +502,8 @@ bool GeometrySection::drawCellsPopup(fixtures::FixtureType& type, int modeIndex)
     ImGui::Checkbox("Include white", &cellWhite_);
     ImGui::EndDisabled();
     if (haveMode)
-        ImGui::TextDisabled("Channels go into mode \"%s\".", type.modes[static_cast<std::size_t>(modeIndex)].name.c_str());
+        ImGui::TextDisabled("Channels go into mode \"%s\".",
+                            type.modes[static_cast<std::size_t>(modeIndex)].name.c_str());
 
     ImGui::Separator();
     if (ImGui::Button("Create", ImVec2(110.0f, 0.0f))) {
@@ -441,10 +511,11 @@ bool GeometrySection::drawCellsPopup(fixtures::FixtureType& type, int modeIndex)
         if (!names.empty()) {
             changed = true;
             if (haveMode && cellChannels_ > 0) {
-                std::vector<Attribute> attributes = {Attribute::ColorAdd_R, Attribute::ColorAdd_G, Attribute::ColorAdd_B};
+                std::vector<Attribute> attributes = {Attribute::ColorAdd_R, Attribute::ColorAdd_G,
+                                                     Attribute::ColorAdd_B};
                 if (cellWhite_) attributes.push_back(Attribute::ColorAdd_W);
-                addCellChannels(type, type.modes[static_cast<std::size_t>(modeIndex)], names, attributes, cellChannels_ == 2,
-                                "All " + cells_.namePrefix + "s");
+                addCellChannels(type, type.modes[static_cast<std::size_t>(modeIndex)], names, attributes,
+                                cellChannels_ == 2, "All " + cells_.namePrefix + "s");
             }
             if (const auto first = findNodePath(type.geometry, names.front())) selected_ = *first;
         }
@@ -468,7 +539,8 @@ void GeometrySection::pollModelImport(fixtures::FixtureType& type, bool& changed
     std::optional<ImportedFile> file = readModelFile(result->path, &error);
     Geometry* node = nodeAt(type.geometry, importTarget_);
     if (!file || node == nullptr) {
-        message_ = file ? "The node no longer exists." : "Cannot use " + result->path.filename().string() + ": " + error;
+        message_ =
+            file ? "The node no longer exists." : "Cannot use " + result->path.filename().string() + ": " + error;
         return;
     }
     message_.clear();

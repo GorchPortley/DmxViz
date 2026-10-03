@@ -1,5 +1,6 @@
 #include "ui/fixture_editor/GeneralSection.h"
 
+#include "ui/ColorWidgets.h"
 #include "ui/fixture_editor/ChannelEditing.h"
 #include "ui/fixture_editor/EditorWidgets.h"
 
@@ -20,6 +21,9 @@ bool GeneralSection::draw(EditDocument& doc, const IdTakenFn& idTaken) {
 
     ImGui::SeparatorText("Movement");
     changed |= drawMovement(type);
+
+    ImGui::SeparatorText("Emitters");
+    changed |= drawEmitters(type);
     return changed;
 }
 
@@ -43,14 +47,33 @@ bool GeneralSection::drawIdentity(EditDocument& doc, const IdTakenFn& idTaken) {
         doc.setAutoId(autoId, idTaken);
         changed = true;
     }
-    if (type.id.empty()) ImGui::TextColored(errorColor(), "The id must not be empty.");
-    else if (idTaken && idTaken(type.id)) ImGui::TextColored(errorColor(), "Another fixture already uses this id.");
+    if (type.id.empty())
+        ImGui::TextColored(errorColor(), "The id must not be empty.");
+    else if (idTaken && idTaken(type.id))
+        ImGui::TextColored(errorColor(), "Another fixture already uses this id.");
     else if (!doc.isNew() && type.id != doc.originalId())
         ImGui::TextDisabled("Apply will add a new fixture; \"%s\" stays as it is.", doc.originalId().c_str());
-    else if (doc.isNew()) ImGui::TextDisabled("Apply will add this fixture to the library.");
-    else ImGui::TextDisabled("Apply will replace \"%s\" in the library.", doc.originalId().c_str());
+    else if (doc.isNew())
+        ImGui::TextDisabled("Apply will add this fixture to the library.");
+    else
+        ImGui::TextDisabled("Apply will replace \"%s\" in the library.", doc.originalId().c_str());
 
-    changed |= ImGui::InputTextMultiline("Description", &type.description, ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 4.5f));
+    changed |= ImGui::InputTextMultiline("Description", &type.description,
+                                         ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 4.5f));
+
+    // Categories ("Moving Head, Color Changer"): text while typing, a list in the fixture.
+    const std::string joined = joinCategories(type.categories);
+    if (joined != categoriesSource_) {
+        categoriesText_ = joined;
+        categoriesSource_ = joined;
+    }
+    if (ImGui::InputText("Categories", &categoriesText_)) {
+        type.categories = splitCategories(categoriesText_);
+        categoriesSource_ = joinCategories(type.categories);
+        changed = true;
+    }
+    ImGui::SetItemTooltip("Comma separated, e.g. Moving Head, Color Changer");
+    changed |= inputText("Revision", type.revision);
     return changed;
 }
 
@@ -94,8 +117,9 @@ bool GeneralSection::drawMovement(fixtures::FixtureType& type) {
     bool changed = false;
     changed |= drawAxisRange(type, fixtures::Attribute::Pan, "Pan range");
     changed |= drawAxisRange(type, fixtures::Attribute::Tilt, "Tilt range");
-    helpMarker("The range is the physical angle of the Pan and Tilt channel functions, in every mode: "
-               "DMX 0 gives the first angle, the maximum DMX value the second.");
+    helpMarker(
+        "The range is the physical angle of the Pan and Tilt channel functions, in every mode: "
+        "DMX 0 gives the first angle, the maximum DMX value the second.");
 
     fixtures::MovementSpec& m = type.physical.movement;
     changed |= dragDegrees("Pan max speed", m.panMaxSpeed, 1.0f, 1.0f, 3600.0f, "%.0f deg/s");
@@ -104,6 +128,41 @@ bool GeneralSection::drawMovement(fixtures::FixtureType& type) {
     changed |= dragDegrees("Tilt acceleration", m.tiltAcceleration, 5.0f, 10.0f, 20000.0f, "%.0f deg/s2");
     changed |= ImGui::DragFloat("Wheel speed", &m.wheelSlotsPerSecond, 0.1f, 0.5f, 100.0f, "%.1f slots/s");
     changed |= dragDegrees("Index rotation speed", m.indexRotationSpeed, 5.0f, 10.0f, 7200.0f, "%.0f deg/s");
+    return changed;
+}
+
+bool GeneralSection::drawEmitters(fixtures::FixtureType& type) {
+    bool changed = false;
+    ImGui::TextDisabled(
+        "LED colours of additive mixing. A ColorAdd function may name one; without it the attribute's standard colour "
+        "is used.");
+
+    int removeIndex = -1;
+    for (std::size_t i = 0; i < type.emitters.size(); ++i) {
+        ImGui::PushID(static_cast<int>(i));
+        fixtures::Emitter& emitter = type.emitters[i];
+        if (const std::optional<std::string> name = emitterName_.draw("##emitterName", emitter.name, 150.0f)) {
+            if (renameEmitter(type, i, *name)) changed = true;
+        }
+        ImGui::SameLine();
+        changed |= colorEditLinear("##emitterColor", emitter.color, ImGuiColorEditFlags_NoInputs);
+        ImGui::SetItemTooltip("Colour of the LED at full output");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(110.0f);
+        changed |= ImGui::DragFloat("##wavelength", &emitter.dominantWavelength, 1.0f, 0.0f, 1000.0f, "%.0f nm");
+        ImGui::SetItemTooltip("Dominant wavelength, 0 = unknown");
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Remove")) removeIndex = static_cast<int>(i);
+        ImGui::PopID();
+    }
+    if (removeIndex >= 0) {
+        type.emitters.erase(type.emitters.begin() + removeIndex);
+        changed = true;
+    }
+    if (ImGui::SmallButton("Add emitter")) {
+        addEmitter(type);
+        changed = true;
+    }
     return changed;
 }
 

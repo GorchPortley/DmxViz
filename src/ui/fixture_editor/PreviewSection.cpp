@@ -108,7 +108,8 @@ void PreviewSection::rebuild(EditorContext& ctx, const fixtures::FixtureType& ty
     }
 
     const int index = std::clamp(modeIndex, 0, static_cast<int>(type_->modes.size()) - 1);
-    runtime_ = std::make_unique<fixtures::FixtureRuntime>(type_, type_->modes[static_cast<std::size_t>(index)].name, assets_.get());
+    runtime_ = std::make_unique<fixtures::FixtureRuntime>(type_, type_->modes[static_cast<std::size_t>(index)].name,
+                                                          assets_.get());
     encoder_ = std::make_unique<fixtures::AttributeEncoder>(*type_, runtime_->mode());
     dmx_.assign(static_cast<std::size_t>(std::max(1, runtime_->footprint())), 0);
     applyFaders();
@@ -129,8 +130,10 @@ void PreviewSection::applyFaders() {
     e.setNormalized(dmx_, Attribute::Pan, faders_.pan);
     e.setNormalized(dmx_, Attribute::Tilt, faders_.tilt);
     e.setNormalized(dmx_, Attribute::Zoom, faders_.zoom);
-    if (hasColourMixing(e)) e.setColor(dmx_, srgbToLinear(faders_.colour));
-    else e.setWheelSlot(dmx_, Attribute::Color1, static_cast<float>(faders_.colourSlot));
+    if (hasColourMixing(e))
+        e.setColor(dmx_, srgbToLinear(faders_.colour));
+    else
+        e.setWheelSlot(dmx_, Attribute::Color1, static_cast<float>(faders_.colourSlot));
     e.setWheelSlot(dmx_, Attribute::Gobo1, static_cast<float>(faders_.goboSlot));
 }
 
@@ -147,11 +150,14 @@ void PreviewSection::buildScene(EditorContext& ctx) {
     // A pipe the fixture hangs from, for scale.
     MeshInstance pipe;
     pipe.mesh = ctx.assets.builtin(assets::BuiltinMesh::Cube);
-    pipe.world = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, kHangHeight + 0.03f, 0.0f)), glm::vec3(1.6f, 0.05f, 0.05f));
+    pipe.world = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, kHangHeight + 0.03f, 0.0f)),
+                            glm::vec3(1.6f, 0.05f, 0.05f));
     pipe.material = Material{glm::vec3(0.35f), 0.4f, 0.8f, glm::vec3(0.0f)};
     scene_.meshes.push_back(pipe);
 
-    if (runtime_) runtime_->emit(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, kHangHeight, 0.0f)), kInvalidNode, scene_.meshes, scene_.beams);
+    if (runtime_)
+        runtime_->emit(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, kHangHeight, 0.0f)), kInvalidNode, scene_.meshes,
+                       scene_.beams);
 
     render::Environment& env = scene_.environment;
     env.hazeDensity = 0.5f;
@@ -168,7 +174,8 @@ void PreviewSection::buildScene(EditorContext& ctx) {
 // ---------------------------------------------------------------------------
 // Frame
 
-void PreviewSection::draw(EditorContext& ctx, const fixtures::FixtureType& type, std::uint64_t revision, int modeIndex) {
+void PreviewSection::draw(EditorContext& ctx, const fixtures::FixtureType& type, std::uint64_t revision,
+                          int modeIndex) {
     ImGuiIO& io = ImGui::GetIO();
     const double now = ImGui::GetTime();
     const bool stale = built_ && (revision != builtRevision_ || modeIndex != builtMode_);
@@ -209,7 +216,8 @@ void PreviewSection::draw(EditorContext& ctx, const fixtures::FixtureType& type,
 
     char caption[160];
     std::snprintf(caption, sizeof(caption), "Preview, mode \"%s\"", runtime_->mode().name.c_str());
-    ImGui::GetWindowDrawList()->AddText(ImVec2(origin.x + 8.0f, origin.y + 6.0f), IM_COL32(210, 210, 220, 200), caption);
+    ImGui::GetWindowDrawList()->AddText(ImVec2(origin.x + 8.0f, origin.y + 6.0f), IM_COL32(210, 210, 220, 200),
+                                        caption);
 
     if (drawFaders()) applyFaders();
 }
@@ -238,11 +246,13 @@ bool PreviewSection::drawFaders() {
         char preview[96];
         const int slots = static_cast<int>(wheel->slots.size());
         faders_.colourSlot = std::clamp(faders_.colourSlot, 1, std::max(1, slots));
-        std::snprintf(preview, sizeof(preview), "%d %s", faders_.colourSlot, slots > 0 ? wheel->slots[static_cast<std::size_t>(faders_.colourSlot - 1)].name.c_str() : "");
+        std::snprintf(preview, sizeof(preview), "%d %s", faders_.colourSlot,
+                      slots > 0 ? wheel->slots[static_cast<std::size_t>(faders_.colourSlot - 1)].name.c_str() : "");
         if (ImGui::BeginCombo("Color", preview)) {
             for (int s = 1; s <= slots; ++s) {
                 char label[96];
-                std::snprintf(label, sizeof(label), "%d %s", s, wheel->slots[static_cast<std::size_t>(s - 1)].name.c_str());
+                std::snprintf(label, sizeof(label), "%d %s", s,
+                              wheel->slots[static_cast<std::size_t>(s - 1)].name.c_str());
                 if (ImGui::Selectable(label, s == faders_.colourSlot)) {
                     faders_.colourSlot = s;
                     changed = true;
@@ -257,11 +267,13 @@ bool PreviewSection::drawFaders() {
         char preview[96];
         const int slots = static_cast<int>(wheel->slots.size());
         faders_.goboSlot = std::clamp(faders_.goboSlot, 1, std::max(1, slots));
-        std::snprintf(preview, sizeof(preview), "%d %s", faders_.goboSlot, slots > 0 ? wheel->slots[static_cast<std::size_t>(faders_.goboSlot - 1)].name.c_str() : "");
+        std::snprintf(preview, sizeof(preview), "%d %s", faders_.goboSlot,
+                      slots > 0 ? wheel->slots[static_cast<std::size_t>(faders_.goboSlot - 1)].name.c_str() : "");
         if (ImGui::BeginCombo("Gobo", preview)) {
             for (int s = 1; s <= slots; ++s) {
                 char label[96];
-                std::snprintf(label, sizeof(label), "%d %s", s, wheel->slots[static_cast<std::size_t>(s - 1)].name.c_str());
+                std::snprintf(label, sizeof(label), "%d %s", s,
+                              wheel->slots[static_cast<std::size_t>(s - 1)].name.c_str());
                 if (ImGui::Selectable(label, s == faders_.goboSlot)) {
                     faders_.goboSlot = s;
                     changed = true;

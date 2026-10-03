@@ -18,7 +18,6 @@
 #include <doctest/doctest.h>
 
 #include <algorithm>
-#include <cstdlib>
 #include <filesystem>
 #include <random>
 #include <string>
@@ -96,7 +95,8 @@ struct SectionDrawer {
     bool drawWindows(EditDocument& doc) {
         bool changed = false;
         const std::vector<Problem> problems = validateFixture(doc.type());
-        HeadlessImGui::window("general", 0, [&] { changed |= general.draw(doc, [](std::string_view) { return false; }); });
+        HeadlessImGui::window("general", 0,
+                              [&] { changed |= general.draw(doc, [](std::string_view) { return false; }); });
         HeadlessImGui::window("geometry", 1, [&] { changed |= geometry.draw(doc, modes.selectedMode()); });
         HeadlessImGui::window("wheels", 2, [&] { changed |= wheels.draw(doc); });
         HeadlessImGui::window("modes", 3, [&] { changed |= modes.draw(doc); });
@@ -221,20 +221,27 @@ TEST_CASE("fixture editor: validation list reports a click") {
 
 // Random clicks all over the sections: presses buttons, opens combos and popups, deletes and reorders
 // things. The data ends up in odd states; the sections must keep drawing without errors or crashes.
-// DMXVIZ_MONKEY_FRAMES raises the number of frames for a longer manual run.
+// 250 frames per fixture keep the unit test quick; raise kMonkeyFrames (20000 or more) for a long manual run.
 TEST_CASE("fixture editor sections survive random clicking") {
-    int frames = 250;
-    if (const char* text = std::getenv("DMXVIZ_MONKEY_FRAMES")) frames = std::max(1, std::atoi(text));
+    constexpr int kMonkeyFrames = 250;
+    const int frames = kMonkeyFrames;
 
     HeadlessImGui imgui;
     ImGuiIO& io = ImGui::GetIO();
     std::mt19937 random(20240611);
     std::uniform_real_distribution<float> unit(0.0f, 1.0f);
 
-    for (FixtureTemplate kind : kAllTemplates) {
-        CAPTURE(templateName(kind));
+    // The templates, then the bundled fixtures (with groups, emitters, many wheels and functions).
+    std::vector<fixtures::FixtureType> subjects;
+    for (FixtureTemplate kind : kAllTemplates) subjects.push_back(makeTemplateFixture(kind));
+    fixtures::FixtureLibrary library;
+    library.loadDirectory(std::filesystem::path(DMXVIZ_DATA_DIR) / "fixtures");
+    for (const fixtures::FixtureType* type : library.all()) subjects.push_back(*type);
+
+    for (const fixtures::FixtureType& subject : subjects) {
+        CAPTURE(subject.id);
         EditDocument doc;
-        doc.openNew(kind, {});
+        doc.openCopy(subject);
         SectionDrawer drawer;
         int changes = 0;
         for (int frame = 0; frame < frames; ++frame) {

@@ -36,7 +36,8 @@ bool inputText(const char* label, std::string& text, ImGuiInputTextFlags flags) 
     return ImGui::InputText(label, &text, flags);
 }
 
-bool dragDegrees(const char* label, float& radians, float speed, float minDegrees, float maxDegrees, const char* format) {
+bool dragDegrees(const char* label, float& radians, float speed, float minDegrees, float maxDegrees,
+                 const char* format) {
     float degrees = radToDeg(radians);
     if (!ImGui::DragFloat(label, &degrees, speed, minDegrees, maxDegrees, format)) return false;
     radians = degToRad(degrees);
@@ -91,6 +92,29 @@ bool AttributePicker::draw(const char* label, fixtures::Attribute& value, float 
         ImGui::EndCombo();
     }
     return changed;
+}
+
+std::optional<std::string> RenameField::draw(const char* label, const std::string& current, float width) {
+    if (width != 0.0f) ImGui::SetNextItemWidth(width);
+    const ImGuiID id = ImGui::GetID(label);
+    std::optional<std::string> finished;
+
+    if (editedId_ != id) {
+        // Not being edited: show the real name; the first keystroke starts an edit on a private copy.
+        std::string shown = current;
+        if (ImGui::InputText(label, &shown)) {
+            editedId_ = id;
+            text_ = std::move(shown);
+        }
+        return finished;
+    }
+
+    ImGui::InputText(label, &text_);
+    if (ImGui::IsItemDeactivated()) {
+        if (text_ != current) finished = text_;
+        editedId_ = 0;
+    }
+    return finished;
 }
 
 void helpMarker(const char* text) {

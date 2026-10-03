@@ -35,7 +35,8 @@ void growFootprint(DmxMode& mode) {
 }
 
 std::string lowerCase(std::string text) {
-    std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    std::transform(text.begin(), text.end(), text.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     return text;
 }
 
@@ -69,7 +70,9 @@ std::string formatOf(const std::filesystem::path& file) {
 }  // namespace
 
 std::string uniqueName(std::string_view base, const std::vector<std::string>& existing) {
-    auto taken = [&](const std::string& name) { return std::find(existing.begin(), existing.end(), name) != existing.end(); };
+    auto taken = [&](const std::string& name) {
+        return std::find(existing.begin(), existing.end(), name) != existing.end();
+    };
     std::string candidate(base);
     for (int n = 2; taken(candidate); ++n) candidate = std::format("{} {}", base, n);
     return candidate;
@@ -160,8 +163,10 @@ void setChannelOffset(DmxMode& mode, std::size_t channelIndex, int slot, int val
     value = std::clamp(value, 0, 512);
     if (slot == 0) {
         if (value < 1) return;
-        if (channel.offsets.empty()) channel.offsets.push_back(static_cast<std::uint16_t>(value));
-        else channel.offsets[0] = static_cast<std::uint16_t>(value);
+        if (channel.offsets.empty())
+            channel.offsets.push_back(static_cast<std::uint16_t>(value));
+        else
+            channel.offsets[0] = static_cast<std::uint16_t>(value);
         growFootprint(mode);
         return;
     }
@@ -225,7 +230,8 @@ Channel newChannelFor(const fixtures::FixtureType& type, Attribute attribute) {
     using fixtures::AttributeFamily;
     const fixtures::AttributeInfo& info = fixtures::attributeInfo(attribute);
     const bool position = info.family == AttributeFamily::Pan || info.family == AttributeFamily::Tilt;
-    Channel channel = makeChannel(std::string(info.name), attribute, position ? 2 : 1, 1, defaultGeometryFor(type, attribute));
+    Channel channel =
+        makeChannel(std::string(info.name), attribute, position ? 2 : 1, 1, defaultGeometryFor(type, attribute));
     if (position || info.family == AttributeFamily::Zoom || info.family == AttributeFamily::Focus)
         channel.defaultValue = channel.maxValue() / 2 + (position ? 1 : 0);
     if (info.family == AttributeFamily::Dimmer) channel.highlightValue = channel.maxValue();
@@ -267,7 +273,7 @@ void fillWheelFunctions(Channel& channel, const fixtures::Wheel& wheel, Attribut
         f.wheel = wheel.name;
         f.slotFrom = f.slotTo = static_cast<float>(i + 1);
         f.name = i < wheel.slots.size() && !wheel.slots[i].name.empty() ? wheel.slots[i].name
-                                                                          : std::format("Slot {}", i + 1);
+                                                                        : std::format("Slot {}", i + 1);
         channel.functions.push_back(std::move(f));
     }
 }
@@ -276,7 +282,8 @@ std::optional<PhysicalRange> attributeRange(const fixtures::FixtureType& type, A
     for (const DmxMode& mode : type.modes)
         for (const Channel& channel : mode.channels)
             for (const ChannelFunction& f : channel.functions)
-                if (f.attribute == attribute && f.kind == FunctionKind::Linear) return PhysicalRange{f.physicalFrom, f.physicalTo};
+                if (f.attribute == attribute && f.kind == FunctionKind::Linear)
+                    return PhysicalRange{f.physicalFrom, f.physicalTo};
     return std::nullopt;
 }
 
@@ -336,17 +343,23 @@ fixtures::WheelSlot makeSlot(fixtures::SlotKind kind, int slotNumber) {
     fixtures::WheelSlot slot;
     slot.kind = kind;
     switch (kind) {
-        case SlotKind::Open: slot.name = "Open"; break;
+        case SlotKind::Open:
+            slot.name = "Open";
+            break;
         case SlotKind::Color:
             slot.name = std::format("Color {}", slotNumber);
             slot.color = glm::vec3(1.0f, 0.15f, 0.15f);
             break;
-        case SlotKind::Gobo: slot.name = std::format("Gobo {}", slotNumber); break;
+        case SlotKind::Gobo:
+            slot.name = std::format("Gobo {}", slotNumber);
+            break;
         case SlotKind::Prism:
             slot.name = "Prism";
             slot.facets = fixtures::makeCircularPrismFacets(3, degToRad(6.0f));
             break;
-        case SlotKind::AnimationWheel: slot.name = std::format("Animation {}", slotNumber); break;
+        case SlotKind::AnimationWheel:
+            slot.name = std::format("Animation {}", slotNumber);
+            break;
         case SlotKind::Frost:
             slot.name = "Frost";
             slot.frost = 0.6f;

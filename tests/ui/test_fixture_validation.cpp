@@ -142,14 +142,17 @@ TEST_CASE("fixture validation: gaps and overlaps in function ranges") {
     }
     SUBCASE("a gap in the middle and at the start") {
         dimmer.functions.clear();
-        dimmer.functions.push_back(fixtures::ChannelFunction{.attribute = Attribute::Dimmer, .dmxFrom = 10, .dmxTo = 100});
-        dimmer.functions.push_back(fixtures::ChannelFunction{.attribute = Attribute::Dimmer, .dmxFrom = 150, .dmxTo = 255});
+        dimmer.functions.push_back(
+            fixtures::ChannelFunction{.attribute = Attribute::Dimmer, .dmxFrom = 10, .dmxTo = 100});
+        dimmer.functions.push_back(
+            fixtures::ChannelFunction{.attribute = Attribute::Dimmer, .dmxFrom = 150, .dmxTo = 255});
         const std::vector<Problem> problems = validateFixture(type);
         CHECK(findProblem(problems, "DMX 0..9 has no function"));
         CHECK(findProblem(problems, "DMX 101..149 has no function"));
     }
     SUBCASE("the same attribute twice overlaps, different attributes do not") {
-        dimmer.functions.push_back(fixtures::ChannelFunction{.attribute = Attribute::Dimmer, .dmxFrom = 100, .dmxTo = 200});
+        dimmer.functions.push_back(
+            fixtures::ChannelFunction{.attribute = Attribute::Dimmer, .dmxFrom = 100, .dmxTo = 200});
         CHECK(findProblem(validateFixture(type), "overlap"));
 
         dimmer.functions.back().attribute = Attribute::Focus1;
@@ -270,9 +273,9 @@ TEST_CASE("fixture validation: a type without modes") {
 
 TEST_CASE("fixture validation: problems are grouped by tab, errors first") {
     fixtures::FixtureType type = movingHead();
-    type.name.clear();                                   // general error
+    type.name.clear();                                          // general error
     channelNamed(type, "Dimmer").functions.front().dmxTo = 99;  // modes warning (gap)
-    channelNamed(type, "Zoom").geometry = "Nowhere";    // modes error
+    channelNamed(type, "Zoom").geometry = "Nowhere";            // modes error
     const std::vector<Problem> problems = validateFixture(type);
     REQUIRE(problems.size() >= 3);
     CHECK(problems.front().area == ProblemArea::General);
@@ -280,8 +283,10 @@ TEST_CASE("fixture validation: problems are grouped by tab, errors first") {
     bool sawWarning = false;
     for (const Problem& p : problems) {
         if (p.area != ProblemArea::Modes) continue;
-        if (p.severity == Severity::Warning) sawWarning = true;
-        else CHECK_FALSE(sawWarning);
+        if (p.severity == Severity::Warning)
+            sawWarning = true;
+        else
+            CHECK_FALSE(sawWarning);
     }
     CHECK(sawWarning);
 }
