@@ -128,7 +128,7 @@ Or press **W**, **E**, **R** to switch tools. Press **F** (or click the gizmo an
 
 ### Snapping
 
-While dragging with a gizmo:
+Snapping applies while you drag a gizmo:
 - Click **Snap** in the viewport toolbar to turn snapping on or off.
 - While it is on, moves snap to a grid (default **0.25 m**) and rotations snap to angle steps (default **15°**).
   Change both steps in the fields next to the **Snap** button.
