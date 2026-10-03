@@ -197,9 +197,9 @@ void DmxInterfacesPanel::drawInterface(EditorContext& ctx, dmx::DmxInterface& if
     char header[160];
     std::snprintf(header, sizeof(header), "%s   [%s]###header", iface.label().c_str(), stateName(interfaceState));
     ImGui::PushStyleColor(ImGuiCol_Text, stateColor(interfaceState));
-    const bool open = ImGui::CollapsingHeader(header, ImGuiTreeNodeFlags_DefaultOpen);
+    const bool expanded = ImGui::CollapsingHeader(header, ImGuiTreeNodeFlags_DefaultOpen);
     ImGui::PopStyleColor();
-    if (!open) return;
+    if (!expanded) return;
 
     ImGui::Indent();
     drawStatus(ctx, iface, state);
@@ -508,13 +508,13 @@ bool DmxInterfacesPanel::drawSerialSettings(dmx::DmxInterface& iface) {
             changed = true;
         }
         ImGui::SetItemTooltip("DMX received by the widget appears in this logical universe");
-    } else if (auto* open = dynamic_cast<dmx::OpenDmxInterface*>(&iface)) {
-        int rate = open->refreshRate();
+    } else if (auto* openDmx = dynamic_cast<dmx::OpenDmxInterface*>(&iface)) {
+        int rate = openDmx->refreshRate();
         fieldLabel("Refresh rate");
         ImGui::SetNextItemWidth(220.0f);
         if (ImGui::SliderInt("##refresh", &rate, dmx::OpenDmxInterface::kMinRefreshRate,
                              dmx::OpenDmxInterface::kMaxRefreshRate, "%d Hz")) {
-            open->setRefreshRate(rate);
+            openDmx->setRefreshRate(rate);
             changed = true;
         }
         ImGui::SetItemTooltip("This cable has no processor: DmxViz generates the DMX signal itself");

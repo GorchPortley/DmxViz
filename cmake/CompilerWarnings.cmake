@@ -8,7 +8,7 @@ function(dmxviz_set_warnings target)
             target_compile_options(${target} PRIVATE /WX)
         endif()
     else()
-        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Wno-unused-parameter
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Wshadow -Wno-unused-parameter
             -Wno-missing-field-initializers)
         if(DMXVIZ_WARNINGS_AS_ERRORS)
             target_compile_options(${target} PRIVATE -Werror)
