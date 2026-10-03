@@ -1,6 +1,8 @@
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest/doctest.h>
 
+#include "ui/FileDialogs.h"
+
 #include <cstdio>
 #include <iostream>
 
@@ -10,6 +12,8 @@
 int main(int argc, char** argv) {
     std::setvbuf(stdout, nullptr, _IONBF, 0);
     std::cout << std::unitbuf;
+    // UI tests click buttons at random; a native file dialog would block the run forever on Windows.
+    dmxviz::ui::FileDialogs::setEnabled(false);
     doctest::Context context(argc, argv);
     return context.run();
 }

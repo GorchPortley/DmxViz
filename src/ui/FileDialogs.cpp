@@ -41,8 +41,14 @@ FileDialogs::FileDialogs() : impl_(std::make_unique<Impl>()) {
 }
 FileDialogs::~FileDialogs() = default;
 
+namespace {
+bool g_dialogsEnabled = true;
+}
+
+void FileDialogs::setEnabled(bool enabled) { g_dialogsEnabled = enabled; }
+
 bool FileDialogs::available() {
-    return pfd::settings::available();
+    return g_dialogsEnabled && pfd::settings::available();
 }
 
 bool FileDialogs::busy() const {

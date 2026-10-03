@@ -33,6 +33,9 @@ public:
 
     // False when the system has no dialog helper (e.g. no zenity on Linux).
     static bool available();
+    // Turns native dialogs off for the whole process (unit tests, headless screenshot runs): a real
+    // dialog would wait for a user who is not there.
+    static void setEnabled(bool enabled);
     bool busy() const;
 
     // `filters` alternates a description and a glob list: {"Projects", "*.dmxviz", "All files", "*"}.

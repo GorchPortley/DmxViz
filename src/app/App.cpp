@@ -140,6 +140,8 @@ void App::init() {
     gui.logger.func = slog_func;
     // Screenshots always start from the default layout.
     gui.ini_filename = options_.screenshotPath ? nullptr : kLayoutIniFile;
+    // Headless screenshot runs have nobody to answer a native file dialog.
+    if (options_.screenshotPath) ui::FileDialogs::setEnabled(false);
     simgui_setup(&gui);
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_NavEnableKeyboard;
