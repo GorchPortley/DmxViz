@@ -571,8 +571,9 @@ void GdtfImport::readWheels(const pugi::xml_node& ft) {
             slot.color = color;
 
             // Prism facets: the facet's rotation tells where its sub-beam goes. The nominal
-            // beam axis is -Z; the deflected axis is the rotated one, and the angular offset
-            // is measured along local X and along Z (the gobo "up" reference after conversion).
+            // beam axis is -Z; the deflected axis is the rotated one. The facet contract is
+            // x = right, y = up when looking along the beam. In DmxViz beam-local axes the beam
+            // leaves along -Y with up = +Z, so right = direction x up = local -X: x is negated.
             for (const pugi::xml_node& facetNode : slotNode.children()) {
                 const std::string_view tag = facetNode.name();
                 if (tag != "Facet" && tag != "PrismFacet") continue;
@@ -580,7 +581,7 @@ void GdtfImport::readWheels(const pugi::xml_node& ft) {
                 glm::vec3 axis =
                     rotation.valid ? rotation.rotation * glm::vec3(0.0f, 0.0f, -1.0f) : glm::vec3(0.0f, 0.0f, -1.0f);
                 axis.z = std::min(axis.z, -1e-3f);  // facets pointing backwards are clamped to the horizon
-                slot.facets.emplace_back(std::atan2(axis.x, -axis.z), std::atan2(-axis.y, -axis.z));
+                slot.facets.emplace_back(-std::atan2(axis.x, -axis.z), std::atan2(-axis.y, -axis.z));
             }
             if (slot.facets.size() > static_cast<std::size_t>(kMaxPrismFacets)) {
                 warn(std::format("wheel \"{}\": prism slot \"{}\" has more than {} facets; extra facets dropped",
