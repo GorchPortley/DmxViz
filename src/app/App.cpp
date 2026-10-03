@@ -244,8 +244,6 @@ void App::loadStartupShow() {
 void App::showStartView() {
     if (viewport_ == nullptr) return;
     viewport_->showPreset(*context_, ui::ViewportCamera::Preset::Perspective);
-    // The bounding sphere used for framing is generous; come in a little for a fuller picture.
-    viewport_->camera().dolly(2.5f);
 }
 
 // ---------------------------------------------------------------------------
