@@ -6,6 +6,8 @@
 #include "imgui.h"
 
 #include <algorithm>
+#include <cfloat>
+#include <cstdio>
 #include <format>
 #include <string>
 #include <vector>

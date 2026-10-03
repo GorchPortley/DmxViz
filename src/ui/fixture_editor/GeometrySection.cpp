@@ -12,6 +12,7 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include <algorithm>
+#include <cstdio>
 #include <format>
 
 namespace dmxviz::ui::fixture_editor {

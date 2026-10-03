@@ -7,6 +7,8 @@
 #include "imgui.h"
 #include "imgui_stdlib.h"
 
+#include <cfloat>
+
 namespace dmxviz::ui::fixture_editor {
 
 bool GeneralSection::draw(EditDocument& doc, const IdTakenFn& idTaken) {

@@ -8,6 +8,7 @@
 #include "imgui_stdlib.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <format>
 
 namespace dmxviz::ui::fixture_editor {

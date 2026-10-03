@@ -3,6 +3,7 @@
 #include "imgui_stdlib.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cctype>
 #include <string_view>
 
