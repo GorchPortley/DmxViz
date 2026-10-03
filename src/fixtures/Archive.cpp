@@ -104,8 +104,9 @@ std::vector<std::uint8_t> ZipWriter::finish() const {
     if (mz_zip_writer_finalize_heap_archive(&zip, &buffer, &size)) {
         const auto* bytes = static_cast<const std::uint8_t*>(buffer);
         out.assign(bytes, bytes + size);
+        mz_free(buffer);  // finalize_heap_archive hands the buffer over to the caller
     }
-    mz_zip_writer_end(&zip);  // frees the heap buffer
+    mz_zip_writer_end(&zip);
     return out;
 }
 

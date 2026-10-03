@@ -38,6 +38,7 @@ public:
         io.DisplaySize = ImVec2(1920.0f, 1200.0f);
         io.ConfigErrorRecoveryEnableDebugLog = false;  // errors are counted below, not printed
         io.ConfigErrorRecoveryEnableTooltip = false;
+        io.ConfigErrorRecoveryEnableAssert = false;  // Debug/sanitizer builds would otherwise abort
         io.DeltaTime = 1.0f / 60.0f;
         io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;  // no GPU: textures are never uploaded
         context_->ErrorCallback = [](ImGuiContext*, void* user, const char* message) {

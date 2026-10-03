@@ -3,7 +3,6 @@
 #include "dmx/protocol/ByteIo.h"
 
 #include <algorithm>
-#include <cstring>
 #include <random>
 
 namespace dmxviz::dmx::sacn {
@@ -83,7 +82,7 @@ std::size_t encodeData(const DataPacket& packet, std::span<std::uint8_t> out) {
     writePduLength(&out[kFramingFlagsLength], total - kFramingFlagsLength);
     bytes::writeU32BE(&out[kFramingVector], kVectorFramingData);
     const std::size_t nameLength = std::min(packet.sourceName.size(), kSourceNameSize - 1);  // keep a NUL
-    std::memcpy(&out[kSourceName], packet.sourceName.data(), nameLength);
+    std::copy_n(packet.sourceName.begin(), nameLength, out.begin() + kSourceName);  // memcpy(nullptr) is UB
     out[kPriority] = std::min(packet.priority, kMaxPriority);
     bytes::writeU16BE(&out[kSyncAddress], packet.syncAddress);
     out[kSequence] = packet.sequence;
