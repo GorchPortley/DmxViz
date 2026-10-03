@@ -17,6 +17,7 @@
 #include <map>
 #include <regex>
 #include <set>
+#include <stdexcept>
 #include <sstream>
 
 // Capability type -> DmxViz mapping (OFL capability-types.md):
@@ -61,10 +62,60 @@ std::string stringOf(const OJson& j, const char* key, std::string fallback = {})
     return v && v->is_string() ? v->get<std::string>() : fallback;
 }
 
+// Numbers in a fixture file are untrusted: 1e300 must neither overflow a later float or integer
+// conversion (undefined behaviour) nor poison the physics with infinities.
+constexpr double kMaxFixtureNumber = 1.0e9;
+constexpr std::size_t kMaxPixels = 4096;  // matrix pixels per fixture
+
+double finiteNumber(double d) {
+    if (!(d >= -kMaxFixtureNumber)) return -kMaxFixtureNumber;  // also catches NaN
+    return d > kMaxFixtureNumber ? kMaxFixtureNumber : d;
+}
+
 std::optional<double> numberOf(const OJson& j, const char* key) {
     const OJson* v = member(j, key);
-    if (v && v->is_number()) return v->get<double>();
+    if (v && v->is_number()) return finiteNumber(v->get<double>());
     return std::nullopt;
+}
+
+// A JSON number as an integer clamped to [lo, hi]. Throws for non-numbers (caught by importOfl).
+std::int64_t clampedInt(const OJson& v, std::int64_t lo, std::int64_t hi) {
+    if (!v.is_number()) throw std::runtime_error("number expected");
+    const double d = finiteNumber(v.get<double>());
+    if (d <= static_cast<double>(lo)) return lo;
+    if (d >= static_cast<double>(hi)) return hi;
+    return static_cast<std::int64_t>(d);
+}
+
+float floatOf(const OJson& v) {
+    if (!v.is_number()) throw std::runtime_error("number expected");
+    return static_cast<float>(finiteNumber(v.get<double>()));
+}
+
+// DMX values in capabilities ("dmxRange": [from, to]).
+std::uint32_t dmxNumber(const OJson& v) {
+    return static_cast<std::uint32_t>(clampedInt(v, 0, 0xFFFFFFFFll));
+}
+
+// Pixel-group name patterns are regular expressions from the file. std::regex backtracks, so only
+// simple patterns are run: short, few quantifiers, no quantified groups and no back-references
+// (nested quantifiers such as (a+)+ take exponential time).
+bool isSimpleRegex(const std::string& pattern) {
+    if (pattern.size() > 64) return false;
+    int quantifiers = 0;
+    for (std::size_t i = 0; i < pattern.size(); ++i) {
+        const char c = pattern[i];
+        if (c == '\\') {
+            if (i + 1 < pattern.size() && std::isdigit(static_cast<unsigned char>(pattern[i + 1]))) return false;
+            ++i;  // skip the escaped character
+            continue;
+        }
+        if (c == '*' || c == '+' || c == '?' || c == '{') {
+            if (i > 0 && pattern[i - 1] == ')') return false;
+            if (!(c == '?' && i > 0 && pattern[i - 1] == '(')) ++quantifiers;
+        }
+    }
+    return quantifiers <= 3;
 }
 
 // ======================================================== entities
@@ -78,7 +129,7 @@ struct Entity {
 };
 
 std::optional<Entity> parseEntity(const OJson& v) {
-    if (v.is_number()) return Entity{v.get<double>(), ""};
+    if (v.is_number()) return Entity{finiteNumber(v.get<double>()), ""};
     if (!v.is_string()) return std::nullopt;
     const std::string s = v.get<std::string>();
     static const std::map<std::string, double, std::less<>> keywords = {
@@ -101,7 +152,7 @@ std::optional<Entity> parseEntity(const OJson& v) {
     }
     std::string unit = s.substr(pos);
     if (unit == "%") number /= 100.0;
-    return Entity{number, unit};
+    return Entity{finiteNumber(number), unit};
 }
 
 // "speed" or "speedStart"/"speedEnd".
@@ -354,7 +405,7 @@ void OflImport::readPhysical() {
     const OJson* p = member(root_, "physical");
     if (!p) return;
     if (const OJson* d = member(*p, "dimensions"); d && d->is_array() && d->size() == 3)
-        for (int i = 0; i < 3; ++i) dimensionsMm_[i] = (*d)[static_cast<std::size_t>(i)].get<float>();
+        for (int i = 0; i < 3; ++i) dimensionsMm_[i] = floatOf((*d)[static_cast<std::size_t>(i)]);
     t_.physical.weight = static_cast<float>(numberOf(*p, "weight").value_or(0.0));
     t_.physical.power = static_cast<float>(numberOf(*p, "power").value_or(0.0));
     if (const OJson* bulb = member(*p, "bulb")) {
@@ -363,8 +414,8 @@ void OflImport::readPhysical() {
     }
     if (const OJson* lens = member(*p, "lens")) {
         if (const OJson* mm = member(*lens, "degreesMinMax"); mm && mm->is_array() && mm->size() == 2) {
-            lensMin_ = (*mm)[0].get<float>();
-            lensMax_ = (*mm)[1].get<float>();
+            lensMin_ = floatOf((*mm)[0]);
+            lensMax_ = floatOf((*mm)[1]);
             hasLens_ = true;
         }
     }
@@ -374,9 +425,9 @@ void OflImport::readPhysical() {
     }
     if (const OJson* mp = member(*p, "matrixPixels")) {
         if (const OJson* d = member(*mp, "dimensions"); d && d->is_array() && d->size() == 3)
-            for (int i = 0; i < 3; ++i) pixelSizeMm_[i] = (*d)[static_cast<std::size_t>(i)].get<float>();
+            for (int i = 0; i < 3; ++i) pixelSizeMm_[i] = floatOf((*d)[static_cast<std::size_t>(i)]);
         if (const OJson* s = member(*mp, "spacing"); s && s->is_array() && s->size() == 3)
-            for (int i = 0; i < 3; ++i) pixelSpacingMm_[i] = (*s)[static_cast<std::size_t>(i)].get<float>();
+            for (int i = 0; i < 3; ++i) pixelSpacingMm_[i] = floatOf((*s)[static_cast<std::size_t>(i)]);
     }
     t_.physical.dimensions = dimensionsMm_ * 0.001f;
 }
@@ -413,13 +464,20 @@ void OflImport::readMatrix() {
             for (std::size_t y = 0; y < layer.size(); ++y) {
                 const OJson& row = layer[y];
                 for (std::size_t x = 0; x < row.size(); ++x)
-                    if (row[x].is_string())
+                    if (row[x].is_string()) {
+                        if (pixels_.size() >= kMaxPixels)
+                            throw std::runtime_error(std::format("matrix has more than {} pixels", kMaxPixels));
                         pixels_.push_back({row[x].get<std::string>(),
                                            {static_cast<int>(x) + 1, static_cast<int>(y) + 1, static_cast<int>(z) + 1}});
+                    }
             }
         }
     } else if (const OJson* count = member(*m, "pixelCount"); count && count->is_array() && count->size() == 3) {
-        const glm::ivec3 n{(*count)[0].get<int>(), (*count)[1].get<int>(), (*count)[2].get<int>()};
+        const glm::ivec3 n{static_cast<int>(clampedInt((*count)[0], 0, 4096)),
+                           static_cast<int>(clampedInt((*count)[1], 0, 4096)),
+                           static_cast<int>(clampedInt((*count)[2], 0, 4096))};
+        if (static_cast<std::int64_t>(n.x) * n.y * n.z > static_cast<std::int64_t>(kMaxPixels))
+            throw std::runtime_error(std::format("matrix has more than {} pixels", kMaxPixels));
         const int defined = (n.x > 1) + (n.y > 1) + (n.z > 1);
         for (int z = 1; z <= n.z; ++z)
             for (int y = 1; y <= n.y; ++y)
@@ -484,7 +542,8 @@ void OflImport::readMatrix() {
                     for (const OJson& pattern : *names)
                         if (pattern.is_string()) {
                             try {
-                                ok = ok && std::regex_search(key, std::regex(pattern.get<std::string>()));
+                                const std::string text = pattern.get<std::string>();
+                                ok = ok && key.size() <= 64 && isSimpleRegex(text) && std::regex_search(key, std::regex(text));
                             } catch (const std::regex_error&) {
                                 ok = false;
                             }
@@ -620,7 +679,7 @@ void OflImport::readWheels() {
                 } else if (type == "Prism") {
                     slot.kind = SlotKind::Prism;
                     hasPrism = true;
-                    const int facets = static_cast<int>(numberOf(s, "facets").value_or(3.0));
+                    const int facets = static_cast<int>(std::clamp(numberOf(s, "facets").value_or(3.0), 1.0, 1000.0));
                     const bool linear = slot.name.find("inear") != std::string::npos;
                     slot.facets = linear ? makeLinearPrismFacets(std::min(facets, dmxviz::kMaxPrismFacets), 4.0f * kDeg)
                                          : makeCircularPrismFacets(std::min(facets, dmxviz::kMaxPrismFacets), 5.0f * kDeg);
@@ -849,8 +908,8 @@ void OflImport::convertCapability(const ChannelDef& def, const OJson& cap, Capab
         f.slotTo = slotTo;
         if (f.name.empty() && slotFrom == slotTo) {
             const auto& slots = t_.wheels[static_cast<std::size_t>(w.index)].slots;
-            const int s = static_cast<int>(slotFrom) - 1;
-            if (slotFrom == std::floor(slotFrom) && s >= 0 && s < static_cast<int>(slots.size()))
+            const double s = slotFrom - 1.0;  // as double: converting a huge slot number to int is undefined
+            if (slotFrom == std::floor(slotFrom) && s >= 0.0 && s < static_cast<double>(slots.size()))
                 f.name = slots[static_cast<std::size_t>(s)].name;
         }
         return f;
@@ -1071,7 +1130,7 @@ void OflImport::convertCapability(const ChannelDef& def, const OJson& cap, Capab
     } else if (type == "BladeInsertion" || type == "BladeRotation") {
         int blade = 1;
         if (const OJson* b = member(cap, "blade")) {
-            if (b->is_number()) blade = b->get<int>();
+            if (b->is_number()) blade = static_cast<int>(clampedInt(*b, 1, 4));
             else if (b->is_string()) {
                 const std::string s = b->get<std::string>();
                 blade = s == "Top" ? 1 : s == "Right" ? 2 : s == "Bottom" ? 3 : s == "Left" ? 4 : 1;
@@ -1127,8 +1186,8 @@ std::vector<CapabilityFunctions> OflImport::convertCapabilities(const ChannelDef
     for (const OJson& cap : *caps) {
         CapabilityFunctions cf;
         if (const OJson* r = member(cap, "dmxRange"); r && r->is_array() && r->size() == 2) {
-            cf.from = (*r)[0].get<std::uint32_t>();
-            cf.to = (*r)[1].get<std::uint32_t>();
+            cf.from = dmxNumber((*r)[0]);
+            cf.to = dmxNumber((*r)[1]);
         }
         convertCapability(def, cap, cf);
         out.push_back(std::move(cf));
@@ -1186,7 +1245,8 @@ bool OflImport::buildModes(std::string* error) {
         if (v.is_string()) {
             auto e = parseEntity(v);
             if (e && e->percent())
-                return static_cast<std::uint32_t>(std::lround(e->value * maxDmxValue(channelBytes)));
+                return static_cast<std::uint32_t>(
+                    std::lround(std::clamp(e->value, 0.0, 1.0) * static_cast<double>(maxDmxValue(channelBytes))));
         }
         return std::nullopt;
     };
@@ -1293,11 +1353,11 @@ bool OflImport::buildModes(std::string* error) {
                         while (e + 1 < alias.targets.size() && e + 1 < caps->size() && alias.targets[e + 1] == alias.targets[c]) ++e;
                         const OJson* r0 = member((*caps)[c], "dmxRange");
                         const OJson* r1 = member((*caps)[e], "dmxRange");
-                        if (r0 && r1) {
-                            const std::uint32_t mFrom = convertDmxResolution((*r0)[0].get<std::uint32_t>(),
-                                                                             masterDef->definitionBytes, masterBytes);
-                            const std::uint32_t mTo = convertDmxResolution((*r1)[1].get<std::uint32_t>(),
-                                                                           masterDef->definitionBytes, masterBytes, true);
+                        if (r0 && r1 && r0->is_array() && r0->size() == 2 && r1->is_array() && r1->size() == 2) {
+                            const std::uint32_t mFrom = convertDmxResolution(dmxNumber((*r0)[0]), masterDef->definitionBytes,
+                                                                             masterBytes);
+                            const std::uint32_t mTo = convertDmxResolution(dmxNumber((*r1)[1]), masterDef->definitionBytes,
+                                                                           masterBytes, true);
                             const std::string& target = alias.targets[c];
                             if (!target.empty() && defs_.contains(target)) {
                                 appendFunctions(channel, defs_.at(target), bytes, alias.master, mFrom, mTo);
