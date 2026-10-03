@@ -371,9 +371,11 @@ conventions (W/E/R gizmo modes, F frame selection, Ctrl+Z/Y, Del, Ctrl+D).
     turns the changes of a frame into one `EditNodesCommand` with a merge key, so dragging a slider
     is one undo step (a new gesture breaks the merge);
   * `ui/ContentEditors.h` for the per-kind inspector widgets (primitive, truss, deck, fixture...).
-* **Settings that are not scene edits** (environment, renderer quality) are changed directly
-  through the context, followed by `ctx.settingsDirty = true`. The application saves the
-  environment (including the render quality under `"quality"`) in the project file.
+* **Settings that are not scene edits**: the environment (haze, exposure...) is changed directly through the
+  context, followed by `ctx.settingsDirty = true`; the application saves it in the project file. The render
+  quality is per-machine: panels edit `renderer.settings()` without marking the project dirty, and the app saves
+  it to `dmxviz_settings.json` next to the ImGui ini (`app/UserSettings.h`). Old projects with
+  `environment.quality` are read once as a fallback.
 * **Menus**: `drawStageMenu(ctx)` (`ui/StageMenu.h`) draws the Add and Tools menus inside the main
   menu bar; its tools (arrays, align, mirror, hang on truss) call the `stage::tools` functions and
   run the returned command through the stack.

@@ -33,14 +33,9 @@ owner after review.
 - [ ] User guide
 
 ## Known issues
-- Prism facet x axis: fixtures write facet x to beam-local +X, the renderer's "right" is direction × up = local −X.
-  Asymmetric prism patterns render mirrored. Fix in the fixtures module (negate x) with a test.
 - GDTF: only the first DMX break is imported; wheel shake/half-slot positions not modelled.
-- `ReparentCommand` may misplace sibling order when several dragged siblings share a parent (outliner drag).
-- Render quality settings are saved in the project (`environment.quality`) but are per-machine; move them to a
-  local settings file.
-- "Hang on truss → spread evenly" uses the truss bounding-box axis; approximate on arcs and circles.
-- No unit tests for app/ui code (Simulation, ProjectIO): the test binary does not link `ui`/`app`.
+- No unit tests for `Simulation` and `App`: the app is an executable, so only its sokol-free files (ProjectIO,
+  UserSettings) are compiled into the test binary.
 
 ## Process notes
 Agents are tiered to stay within usage limits: the integration owner (Opus) plans, reviews and merges;
