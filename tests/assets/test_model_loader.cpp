@@ -153,7 +153,7 @@ Bytes make3ds(std::uint32_t groupA, std::uint32_t groupB, float scale = 1.0f, bo
     }
     Chunk3ds faces{0x4120, {}, {}};
     put16(faces.payload, 2);
-    for (std::uint16_t i : {0, 1, 2, 0, 1, 0, 3, 0}) put16(faces.payload, i);  // a b c flags
+    for (int i : {0, 1, 2, 0, 1, 0, 3, 0}) put16(faces.payload, static_cast<std::uint16_t>(i));  // a b c flags
     Chunk3ds group{0x4130, {}, {}};
     putStr(group.payload, "Red");
     put16(group.payload, 1);
