@@ -1,0 +1,7 @@
+# Keep text files LF on every platform: tests and parsers compare file contents byte for byte.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.gdtf binary
+*.glb binary
+*.3ds binary

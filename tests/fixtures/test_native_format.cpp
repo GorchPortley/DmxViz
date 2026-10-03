@@ -442,7 +442,8 @@ TEST_CASE("native format: the complete example in docs/FIXTURE_FORMAT.md loads")
     const fs::path doc = fs::path(DMXVIZ_DATA_DIR) / ".." / "docs" / "FIXTURE_FORMAT.md";
     std::ifstream in(doc, std::ios::binary);
     REQUIRE_MESSAGE(in.good(), "cannot open " << doc.string());
-    const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    std::erase(text, '\r');  // tolerate CRLF checkouts
 
     const std::size_t heading = text.find("## Complete example");
     REQUIRE(heading != std::string::npos);
