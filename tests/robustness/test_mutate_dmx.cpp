@@ -240,7 +240,7 @@ TEST_CASE("mutation: Art-Net interface keeps serving after damaged datagrams") {
     config.nic = kLoopbackAddress;
     config.port = 0;
     config.broadcastOutput = false;
-    iface.setConfig(config);
+    iface.setConfig(std::move(config));
     iface.attach(&store, 1);
     std::string error;
     REQUIRE_MESSAGE(iface.start(error), error);
@@ -269,7 +269,7 @@ TEST_CASE("mutation: sACN interface keeps serving after damaged datagrams") {
     config.port = 0;
     config.multicastInput = false;
     config.acceptAllUniverses = true;
-    iface.setConfig(config);
+    iface.setConfig(std::move(config));
     iface.attach(&store, 1);
     std::string error;
     REQUIRE_MESSAGE(iface.start(error), error);

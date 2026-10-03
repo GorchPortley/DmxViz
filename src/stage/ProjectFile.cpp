@@ -1,5 +1,6 @@
 #include "stage/ProjectFile.h"
 
+#include "core/Limits.h"
 #include "core/Log.h"
 #include "stage/PathUtil.h"
 #include "stage/SceneJson.h"
@@ -123,12 +124,20 @@ bool saveProject(const Project& project, const std::filesystem::path& file, std:
 
 std::optional<Project> loadProject(const std::filesystem::path& file, std::string* error,
                                    std::vector<std::string>* warnings) {
+    if (limits::fileTooLarge(file)) {
+        if (error) *error = pathToUtf8(file.filename()) + ": file is too large";
+        return std::nullopt;
+    }
     std::ifstream in(file, std::ios::binary);
     if (!in) {
         if (error) *error = "cannot open " + pathToUtf8(file);
         return std::nullopt;
     }
     const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    if (limits::jsonNestedTooDeeply(text)) {
+        if (error) *error = pathToUtf8(file.filename()) + ": JSON is nested too deeply";
+        return std::nullopt;
+    }
     json j;
     try {
         j = json::parse(text);

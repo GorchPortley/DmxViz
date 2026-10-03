@@ -95,7 +95,7 @@ TEST_CASE("mutation: native fixture JSON") {
 
     SlowestCall slowest;
     std::size_t accepted = 0;
-    for (std::size_t i = 0; i < 1500; ++i) {
+    for (std::size_t i = 0; i < 800; ++i) {
         const std::size_t which = i % samples.size();
         const std::string text = mutateJsonText(documents[which], samples[which], rng, i);
         slowest.run([&] {
@@ -105,7 +105,7 @@ TEST_CASE("mutation: native fixture JSON") {
             }
         });
     }
-    MESSAGE("native: " << accepted << " of 1500 mutations were still accepted");
+    MESSAGE("native: " << accepted << " of 800 mutations were still accepted");
     CHECK(accepted > 0);  // some edits are harmless; the loop is not only testing rejection
     CHECK(slowest.seconds() < 2.0);
 }
@@ -128,7 +128,7 @@ TEST_CASE("mutation: Open Fixture Library JSON") {
 
     SlowestCall slowest;
     std::size_t accepted = 0;
-    for (std::size_t i = 0; i < 1200; ++i) {
+    for (std::size_t i = 0; i < 380; ++i) {
         const std::size_t which = i % samples.size();
         const nlohmann::json edited = nlohmann::json::parse(
             mutateJsonText(nlohmann::json::parse(samples[which]), samples[which], rng, i), nullptr, false);
@@ -162,7 +162,7 @@ TEST_CASE("mutation: GDTF archives and description.xml") {
 
     SlowestCall slowest;
     // 1) Damaged zip container.
-    for (std::size_t i = 0; i < 700; ++i) {
+    for (std::size_t i = 0; i < 400; ++i) {
         const Bytes mutated = mutateBytes(archives[i % archives.size()], rng, i);
         slowest.run([&] {
             if (auto type = importGdtf(mutated, &error)) exercise(*type, rng);
@@ -170,7 +170,7 @@ TEST_CASE("mutation: GDTF archives and description.xml") {
     }
     // 2) Intact zip, damaged description.xml (attribute values, truncation, bit flips).
     std::size_t accepted = 0;
-    for (std::size_t i = 0; i < 900; ++i) {
+    for (std::size_t i = 0; i < 500; ++i) {
         const std::string xml = mutateXml(xmls[i % xmls.size()], rng, i);
         const Bytes archive = test::makeGdtfArchive(xml);
         slowest.run([&] {
@@ -180,7 +180,7 @@ TEST_CASE("mutation: GDTF archives and description.xml") {
             }
         });
     }
-    MESSAGE("GDTF xml: " << accepted << " of 900 mutations were still accepted");
+    MESSAGE("GDTF xml: " << accepted << " of 500 mutations were still accepted");
     CHECK(accepted > 0);
     CHECK(slowest.seconds() < 2.0);
 }

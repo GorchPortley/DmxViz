@@ -1,5 +1,6 @@
 #include "fixtures/OflImporter.h"
 
+#include "core/Limits.h"
 #include "core/Log.h"
 #include "fixtures/Archive.h"
 #include "fixtures/ColorMath.h"
@@ -609,8 +610,13 @@ std::string OflImport::goboResource(const OJson* resource, const std::string& sl
         if (slash != std::string::npos) {
             const fs::path aliasFile = options_.resourceDir / "gobos" / "aliases" / (rest.substr(0, slash) + ".json");
             std::ifstream in(aliasFile);
-            if (in) {
-                const OJson aliases = OJson::parse(in, nullptr, false);
+            if (in && !limits::fileTooLarge(aliasFile)) {
+                std::ostringstream aliasText;
+                aliasText << in.rdbuf();
+                const std::string aliasJson = aliasText.str();
+                const OJson aliases = limits::jsonNestedTooDeeply(aliasJson)
+                                          ? OJson(OJson::value_t::discarded)
+                                          : OJson::parse(aliasJson, nullptr, false);
                 key = stringOf(aliases, rest.substr(slash + 1).c_str());
             }
         }
@@ -1523,9 +1529,20 @@ std::optional<FixtureType> importOflFile(const std::filesystem::path& path, OflI
         if (error) *error = "cannot open " + path.string();
         return std::nullopt;
     }
+    if (limits::fileTooLarge(path)) {
+        if (error) *error = path.filename().string() + ": file is too large";
+        return std::nullopt;
+    }
+    std::ostringstream fileText;
+    fileText << in.rdbuf();
+    const std::string text = fileText.str();
+    if (limits::jsonNestedTooDeeply(text)) {
+        if (error) *error = path.filename().string() + ": JSON is nested too deeply";
+        return std::nullopt;
+    }
     nlohmann::ordered_json json;
     try {
-        json = nlohmann::ordered_json::parse(in);
+        json = nlohmann::ordered_json::parse(text);
     } catch (const nlohmann::json::exception& e) {
         if (error) *error = path.filename().string() + ": invalid JSON: " + e.what();
         return std::nullopt;

@@ -1,5 +1,7 @@
 #include "assets/ModelLoader.h"
 
+#include "core/Limits.h"
+
 // The cgltf implementation is compiled once elsewhere (a non-strict third
 // party target); this file only uses the API.
 #include "cgltf.h"
@@ -12,8 +14,10 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <format>
 #include <fstream>
+#include <filesystem>
 #include <functional>
 #include <iterator>
 #include <unordered_map>
@@ -55,6 +59,9 @@ std::filesystem::path pathFromUtf8(std::string_view utf8) {
 }
 
 std::optional<std::vector<std::uint8_t>> readWholeFile(const std::filesystem::path& path) {
+    std::error_code sizeError;
+    const std::uintmax_t size = std::filesystem::file_size(path, sizeError);
+    if (!sizeError && size > limits::kMaxFileBytes) return std::nullopt;  // refuse absurd files up front
     std::ifstream in(path, std::ios::binary);
     if (!in) return std::nullopt;
     return std::vector<std::uint8_t>((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
@@ -194,6 +201,26 @@ void finishModel(ModelData& model) {
     }
 }
 
+// Running totals for one model. Checked while parts are added so a hostile file (a few instanced
+// nodes of a huge mesh, millions of materials) stops early with an error instead of exhausting memory.
+struct ModelBudget {
+    std::size_t triangles = 0;
+    std::size_t vertices = 0;
+    std::size_t parts = 0;
+
+    bool add(const MeshData& mesh, std::string& error) {
+        triangles += mesh.indices.size() / 3;
+        vertices += mesh.vertices.size();
+        if (++parts > limits::kMaxModelParts || triangles > limits::kMaxTriangles ||
+            vertices > limits::kMaxVertices) {
+            error = std::format("the model is too large (more than {} million triangles or {} parts)",
+                                limits::kMaxTriangles / 1'000'000, limits::kMaxModelParts);
+            return false;
+        }
+        return true;
+    }
+};
+
 // =============================================================================
 // glTF 2.0
 // =============================================================================
@@ -300,6 +327,11 @@ bool gltfPrimitive(const cgltf_primitive& prim, MeshData& mesh, std::string& err
         if (a.type == cgltf_attribute_type_texcoord && a.index == 0) texcoord = a.data;
     }
     if (!position || position->count == 0) return true;
+    // An accessor without a buffer view claims any count; check before allocating for it.
+    if (position->count > limits::kMaxVertices || (prim.indices && prim.indices->count > 3 * limits::kMaxTriangles)) {
+        error = std::format("mesh with {} vertices is too large", position->count);
+        return false;
+    }
     const std::size_t count = position->count;
     std::vector<float> pos, nrm, uv;
     if (!unpackFloats(position, 3, pos)) {
@@ -354,9 +386,15 @@ bool gltfPrimitive(const cgltf_primitive& prim, MeshData& mesh, std::string& err
     return true;
 }
 
-bool gltfNode(const cgltf_node* node, const glm::mat4& conversion, ModelData& model, std::string& error, int depth) {
+bool gltfNode(const cgltf_node* node, const glm::mat4& conversion, ModelData& model, ModelBudget& budget,
+              std::size_t& visits, std::string& error, int depth) {
     if (depth > 256) {
         error = "node hierarchy too deep";
+        return false;
+    }
+    // A node may be listed as child several times, so a small file can describe billions of visits.
+    if (++visits > limits::kMaxModelNodeVisits) {
+        error = "glTF scene has too many node instances";
         return false;
     }
     if (node->mesh) {
@@ -371,6 +409,7 @@ bool gltfNode(const cgltf_node* node, const glm::mat4& conversion, ModelData& mo
                 return false;
             }
             if (part.mesh.indices.empty()) continue;
+            if (!budget.add(part.mesh, error)) return false;
             part.mesh.name = mesh.name ? mesh.name : (node->name ? node->name : "");
             part.material = gltfMaterial(mesh.primitives[i].material);
             part.transform = world;
@@ -378,7 +417,7 @@ bool gltfNode(const cgltf_node* node, const glm::mat4& conversion, ModelData& mo
         }
     }
     for (cgltf_size i = 0; i < node->children_count; ++i) {
-        if (!gltfNode(node->children[i], conversion, model, error, depth + 1)) return false;
+        if (!gltfNode(node->children[i], conversion, model, budget, visits, error, depth + 1)) return false;
     }
     return true;
 }
@@ -391,6 +430,20 @@ bool loadGltf(std::span<const std::uint8_t> bytes, const ModelLoadOptions& opts,
     options.file.read = &gltfReadFile;
     options.file.release = &gltfReleaseFile;
     options.file.user_data = &files;
+
+    // cgltf skips unknown JSON (extras, extensions) recursively: refuse deeply nested documents first.
+    // For a GLB only the JSON chunk is scanned (the binary chunk is not text).
+    std::span<const std::uint8_t> jsonText = bytes;
+    if (bytes.size() >= 20 && std::memcmp(bytes.data(), "glTF", 4) == 0) {
+        std::uint32_t chunkLength = 0;
+        std::memcpy(&chunkLength, bytes.data() + 12, 4);  // little endian on every supported platform
+        jsonText = bytes.subspan(20, std::min<std::size_t>(chunkLength, bytes.size() - 20));
+    }
+    if (limits::jsonNestedTooDeeply(std::string_view(reinterpret_cast<const char*>(jsonText.data()), jsonText.size()),
+                                    64)) {
+        error = "glTF: JSON is nested too deeply";
+        return false;
+    }
 
     GltfGuard guard;
     cgltf_result r = cgltf_parse(&options, bytes.data(), bytes.size(), &guard.data);
@@ -419,14 +472,18 @@ bool loadGltf(std::span<const std::uint8_t> bytes, const ModelLoadOptions& opts,
     }
 
     const glm::mat4 conversion = conversionMatrix(opts);
+    ModelBudget budget;
+    std::size_t visits = 0;
     const cgltf_scene* scene = data->scene ? data->scene : (data->scenes_count > 0 ? &data->scenes[0] : nullptr);
     if (scene) {
         for (cgltf_size i = 0; i < scene->nodes_count; ++i) {
-            if (!gltfNode(scene->nodes[i], conversion, model, error, 0)) return false;
+            if (!gltfNode(scene->nodes[i], conversion, model, budget, visits, error, 0)) return false;
         }
     } else if (data->nodes_count > 0) {
         for (cgltf_size i = 0; i < data->nodes_count; ++i) {
-            if (!data->nodes[i].parent && !gltfNode(&data->nodes[i], conversion, model, error, 0)) return false;
+            if (!data->nodes[i].parent &&
+                !gltfNode(&data->nodes[i], conversion, model, budget, visits, error, 0))
+                return false;
         }
     } else {
         // No node hierarchy at all: show every mesh at the origin.
@@ -435,6 +492,7 @@ bool loadGltf(std::span<const std::uint8_t> bytes, const ModelLoadOptions& opts,
                 ModelPart part;
                 if (!gltfPrimitive(data->meshes[i].primitives[j], part.mesh, error)) return false;
                 if (part.mesh.indices.empty()) continue;
+                if (!budget.add(part.mesh, error)) return false;
                 part.material = gltfMaterial(data->meshes[i].primitives[j].material);
                 part.transform = conversion;
                 model.parts.push_back(std::move(part));
@@ -580,6 +638,8 @@ bool loadObj(std::span<const std::uint8_t> bytes, const ModelLoadOptions& opts, 
     std::unordered_map<std::string, std::size_t> partOf;
     std::string currentMaterial;
     ObjPart* part = nullptr;
+    std::size_t triangleTotal = 0;
+    const std::string tooLarge = std::format("OBJ: more than {} million triangles or vertices", limits::kMaxTriangles / 1'000'000);
 
     auto selectPart = [&](const std::string& name) {
         auto [it, inserted] = partOf.emplace(name, parts.size());
@@ -594,6 +654,11 @@ bool loadObj(std::span<const std::uint8_t> bytes, const ModelLoadOptions& opts, 
         std::string_view rest = line;
         const std::string_view key = nextToken(rest);
         float f[3] = {0, 0, 0};
+        if ((key == "v" || key == "vn" || key == "vt") &&
+            positions.size() + normals.size() + uvs.size() >= limits::kMaxVertices) {
+            error = tooLarge;
+            return false;
+        }
         if (key == "v") {
             if (!parseFloats(rest, f, 3)) {
                 error = std::format("OBJ line {}: bad vertex", lineNo);
@@ -648,6 +713,11 @@ bool loadObj(std::span<const std::uint8_t> bytes, const ModelLoadOptions& opts, 
             }
             if (corners.size() < 3) {
                 error = std::format("OBJ line {}: face with fewer than 3 vertices", lineNo);
+                return false;
+            }
+            triangleTotal += corners.size() - 2;
+            if (triangleTotal > limits::kMaxTriangles) {
+                error = tooLarge;
                 return false;
             }
             for (std::size_t i = 2; i < corners.size(); ++i)
@@ -753,6 +823,8 @@ public:
 private:
     std::span<const std::uint8_t> data_;
 };
+
+constexpr std::size_t kMax3dsMaterialGroups = 1024;  // real objects have a handful
 
 struct ThreeDsObject {
     std::string name;
@@ -950,6 +1022,10 @@ private:
                                   error = "3DS: bad face material group";
                                   return false;
                               }
+                              if (obj.materialFaces.size() >= kMax3dsMaterialGroups) {
+                                  error = "3DS: too many material groups in one object";
+                                  return false;
+                              }
                               std::vector<std::uint16_t> list(n);
                               for (std::size_t i = 0; i < n; ++i) r_.u16(after + 2 + i * 2, list[i]);
                               obj.materialFaces.emplace_back(std::move(name), std::move(list));
@@ -969,6 +1045,7 @@ bool load3ds(std::span<const std::uint8_t> bytes, const ModelLoadOptions& opts, 
     ThreeDsParser parser(bytes);
     if (!parser.parse(error)) return false;
     const glm::mat4 conversion = conversionMatrix(opts);
+    ModelBudget budget;
     for (const ThreeDsObject& obj : parser.objects) {
         // Material index per face; -1 = the default material.
         std::vector<int> faceMaterial(obj.faces.size(), -1);
@@ -977,13 +1054,17 @@ bool load3ds(std::span<const std::uint8_t> bytes, const ModelLoadOptions& opts, 
                 if (f < faceMaterial.size()) faceMaterial[f] = static_cast<int>(m);
             }
         }
+        // Faces per material, collected in one pass (a loop over all faces per material is quadratic).
+        std::vector<std::vector<std::size_t>> facesOf(obj.materialFaces.size() + 1);
+        for (std::size_t f = 0; f < obj.faces.size(); ++f) facesOf[static_cast<std::size_t>(faceMaterial[f] + 1)].push_back(f);
         for (int m = -1; m < static_cast<int>(obj.materialFaces.size()); ++m) {
+            const std::vector<std::size_t>& faceList = facesOf[static_cast<std::size_t>(m + 1)];
+            if (faceList.empty()) continue;
             ModelPart part;
             part.mesh.name = obj.name;
             std::vector<std::uint32_t> groups;
             std::vector<std::uint32_t> vertexOf(obj.vertices.size(), UINT32_MAX);
-            for (std::size_t f = 0; f < obj.faces.size(); ++f) {
-                if (faceMaterial[f] != m) continue;
+            for (std::size_t f : faceList) {
                 for (std::uint16_t vi : obj.faces[f]) {
                     if (vertexOf[vi] == UINT32_MAX) {
                         vertexOf[vi] = static_cast<std::uint32_t>(part.mesh.vertices.size());
@@ -997,6 +1078,7 @@ bool load3ds(std::span<const std::uint8_t> bytes, const ModelLoadOptions& opts, 
                 if (!obj.smoothing.empty()) groups.push_back(obj.smoothing[f]);
             }
             if (part.mesh.indices.empty()) continue;
+            if (!budget.add(part.mesh, error)) return false;
             if (obj.smoothing.empty())
                 generateNormals(part.mesh, kObjCreaseCos);
             else
@@ -1043,6 +1125,7 @@ std::optional<ModelData> loadImpl(std::span<const std::uint8_t> bytes, std::stri
         return std::nullopt;
     };
     if (bytes.empty()) return fail("empty model data");
+    if (bytes.size() > limits::kMaxFileBytes) return fail("model file is too large");
     ModelData model;
     std::string err;
     bool ok = false;
@@ -1059,6 +1142,17 @@ std::optional<ModelData> loadImpl(std::span<const std::uint8_t> bytes, std::stri
     return model;
 }
 
+// Backstop: whatever the loaders miss (std::bad_alloc, length_error) must not cross the module boundary.
+std::optional<ModelData> loadGuarded(std::span<const std::uint8_t> bytes, std::string_view formatHint,
+                                     const ModelLoadOptions& opts, std::string* error, const ReadFileFn& readFile) {
+    try {
+        return loadImpl(bytes, formatHint, opts, error, readFile);
+    } catch (const std::exception& e) {
+        if (error) *error = std::string("cannot load model: ") + e.what();
+        return std::nullopt;
+    }
+}
+
 }  // namespace
 
 std::optional<ModelData> loadModel(const std::filesystem::path& path, const ModelLoadOptions& opts,
@@ -1071,7 +1165,7 @@ std::optional<ModelData> loadModel(const std::filesystem::path& path, const Mode
     const std::filesystem::path dir = path.parent_path();
     const ReadFileFn readFile = [&dir](std::string_view uri) { return readWholeFile(dir / pathFromUtf8(uri)); };
     std::string ext = path.extension().string();
-    std::optional<ModelData> model = loadImpl(*bytes, ext, opts, error, readFile);
+    std::optional<ModelData> model = loadGuarded(*bytes, ext, opts, error, readFile);
     if (!model && error) *error = path.filename().string() + ": " + *error;
     return model;
 }
@@ -1083,7 +1177,7 @@ std::optional<ModelData> loadModelFromMemory(std::span<const std::uint8_t> bytes
     if (resolveFile) {
         readFile = [resolveFile, resolverUser](std::string_view uri) { return resolveFile(resolverUser, uri); };
     }
-    return loadImpl(bytes, formatHint, opts, error, readFile);
+    return loadGuarded(bytes, formatHint, opts, error, readFile);
 }
 
 }  // namespace dmxviz::assets

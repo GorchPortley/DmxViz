@@ -140,7 +140,7 @@ TEST_CASE("robustness: DmxManager with live interfaces, feeders and monitors whi
         c.port = 0;
         c.broadcastOutput = false;
         c.unicastTargets = {peerEndpoint};
-        artnet->setConfig(c);
+        artnet->setConfig(std::move(c));
         SacnConfig s = sacnIf->config();
         s.nic = kLoopbackAddress;
         s.port = 0;
@@ -148,7 +148,7 @@ TEST_CASE("robustness: DmxManager with live interfaces, feeders and monitors whi
         s.multicastOutput = false;
         s.acceptAllUniverses = true;
         s.unicastTargets = {peerEndpoint};
-        sacnIf->setConfig(s);
+        sacnIf->setConfig(std::move(s));
     }
     manager.setRoutes({{1, artnetId}, {1, sacnId}, {2, loopId}, {2, artnetId}});
 

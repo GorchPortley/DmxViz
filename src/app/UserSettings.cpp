@@ -1,5 +1,6 @@
 #include "app/UserSettings.h"
 
+#include "core/Limits.h"
 #include "core/Log.h"
 #include "stage/PathUtil.h"
 
@@ -76,8 +77,12 @@ bool UserSettings::load(render::RenderSettings& quality, std::string& error) {
         error = "cannot read " + stage::pathToUtf8(file_);
         return false;
     }
-    const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-    const json root = json::parse(text, nullptr, false);
+    // A damaged settings file is reported, never fatal: oversized or deeply nested files count as damaged.
+    const std::string text = limits::fileTooLarge(file_, 16u << 20)
+                                 ? std::string()
+                                 : std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    const json root = limits::jsonNestedTooDeeply(text) ? json(json::value_t::discarded)
+                                                        : json::parse(text, nullptr, false);
     if (!root.is_object() || !root.contains("quality") || !qualityFromJson(root["quality"], quality)) {
         error = stage::pathToUtf8(file_) + " is damaged, using the default settings";
         return false;
