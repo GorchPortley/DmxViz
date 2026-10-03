@@ -14,5 +14,6 @@ inline constexpr const char* kFixtureLibraryTitle = "Fixture Library";
 inline constexpr const char* kPatchTitle = "Patch";
 inline constexpr const char* kDmxInterfacesTitle = "DMX Interfaces";
 inline constexpr const char* kTestConsoleTitle = "Test Console";
+inline constexpr const char* kFixtureEditorTitle = "Fixture Editor";
 
 }  // namespace dmxviz::ui

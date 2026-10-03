@@ -154,6 +154,84 @@ void setChannelBytes(DmxMode& mode, std::size_t channelIndex, int bytes) {
     growFootprint(mode);
 }
 
+void setChannelOffset(DmxMode& mode, std::size_t channelIndex, int slot, int value) {
+    if (channelIndex >= mode.channels.size() || slot < 0 || slot > 2) return;
+    Channel& channel = mode.channels[channelIndex];
+    value = std::clamp(value, 0, 512);
+    if (slot == 0) {
+        if (value < 1) return;
+        if (channel.offsets.empty()) channel.offsets.push_back(static_cast<std::uint16_t>(value));
+        else channel.offsets[0] = static_cast<std::uint16_t>(value);
+        growFootprint(mode);
+        return;
+    }
+    if (channel.offsets.empty()) return;  // a virtual channel has no bytes to extend
+    const int bytes = value > 0 ? std::max(slot + 1, channel.byteCount()) : slot;
+    setChannelBytes(mode, channelIndex, bytes);
+    if (value > 0) channel.offsets[static_cast<std::size_t>(slot)] = static_cast<std::uint16_t>(value);
+    growFootprint(mode);
+}
+
+void setChannelAttribute(Channel& channel, Attribute attribute) {
+    if (channel.functions.empty()) {
+        channel.functions.push_back(makeFunction(attribute, 0, channel.maxValue()));
+        return;
+    }
+    const Attribute previous = channel.functions.front().attribute;
+    const bool single = channel.functions.size() == 1;
+    for (ChannelFunction& f : channel.functions) {
+        if (f.attribute != previous) continue;
+        const ChannelFunction fresh = makeFunction(attribute, f.dmxFrom, f.dmxTo);
+        f.attribute = attribute;
+        if (single) {
+            f.kind = fresh.kind;
+            f.physicalFrom = fresh.physicalFrom;
+            f.physicalTo = fresh.physicalTo;
+        }
+    }
+}
+
+namespace {
+
+// First Beam node of the tree (where dimmer, colour and gobo channels usually act).
+const fixtures::Geometry* firstBeam(const fixtures::FixtureType& type) {
+    const fixtures::Geometry* found = nullptr;
+    fixtures::forEachGeometry(type.geometry, [&](const fixtures::Geometry& g, const fixtures::Geometry*) {
+        if (found == nullptr && g.type == fixtures::GeometryType::Beam) found = &g;
+    });
+    return found;
+}
+
+std::string defaultGeometryFor(const fixtures::FixtureType& type, Attribute attribute) {
+    using fixtures::AttributeFamily;
+    const AttributeFamily family = fixtures::attributeFamily(attribute);
+    if (family == AttributeFamily::Pan || family == AttributeFamily::PanRotate || family == AttributeFamily::Tilt ||
+        family == AttributeFamily::TiltRotate) {
+        std::vector<const fixtures::Geometry*> axes;
+        fixtures::forEachGeometry(type.geometry, [&](const fixtures::Geometry& g, const fixtures::Geometry*) {
+            if (g.type == fixtures::GeometryType::Axis) axes.push_back(&g);
+        });
+        if (axes.empty()) return {};
+        const bool tilt = family == AttributeFamily::Tilt || family == AttributeFamily::TiltRotate;
+        return (tilt && axes.size() > 1 ? axes[1] : axes[0])->name;
+    }
+    const fixtures::Geometry* beam = firstBeam(type);
+    return beam != nullptr ? beam->name : std::string();
+}
+
+}  // namespace
+
+Channel newChannelFor(const fixtures::FixtureType& type, Attribute attribute) {
+    using fixtures::AttributeFamily;
+    const fixtures::AttributeInfo& info = fixtures::attributeInfo(attribute);
+    const bool position = info.family == AttributeFamily::Pan || info.family == AttributeFamily::Tilt;
+    Channel channel = makeChannel(std::string(info.name), attribute, position ? 2 : 1, 1, defaultGeometryFor(type, attribute));
+    if (position || info.family == AttributeFamily::Zoom || info.family == AttributeFamily::Focus)
+        channel.defaultValue = channel.maxValue() / 2 + (position ? 1 : 0);
+    if (info.family == AttributeFamily::Dimmer) channel.highlightValue = channel.maxValue();
+    return channel;
+}
+
 void closeFunctionGaps(Channel& channel) {
     if (channel.functions.empty()) return;
     for (const ChannelFunction& f : channel.functions)
@@ -192,6 +270,27 @@ void fillWheelFunctions(Channel& channel, const fixtures::Wheel& wheel, Attribut
                                                                           : std::format("Slot {}", i + 1);
         channel.functions.push_back(std::move(f));
     }
+}
+
+std::optional<PhysicalRange> attributeRange(const fixtures::FixtureType& type, Attribute attribute) {
+    for (const DmxMode& mode : type.modes)
+        for (const Channel& channel : mode.channels)
+            for (const ChannelFunction& f : channel.functions)
+                if (f.attribute == attribute && f.kind == FunctionKind::Linear) return PhysicalRange{f.physicalFrom, f.physicalTo};
+    return std::nullopt;
+}
+
+int setAttributeRange(fixtures::FixtureType& type, Attribute attribute, float from, float to) {
+    int changed = 0;
+    for (DmxMode& mode : type.modes)
+        for (Channel& channel : mode.channels)
+            for (ChannelFunction& f : channel.functions)
+                if (f.attribute == attribute && f.kind == FunctionKind::Linear) {
+                    f.physicalFrom = from;
+                    f.physicalTo = to;
+                    ++changed;
+                }
+    return changed;
 }
 
 void addCellChannels(fixtures::FixtureType& type, DmxMode& mode, const std::vector<std::string>& cells,

@@ -47,11 +47,34 @@ void renumberOffsets(fixtures::DmxMode& mode);
 // and function ranges are rescaled to the new resolution. Updates the footprint.
 void setChannelBytes(fixtures::DmxMode& mode, std::size_t channelIndex, int bytes);
 
+// Sets offset `slot` (0 = coarse, 1 = fine, 2 = ultra) of a channel. A value of 0 for the fine or ultra
+// byte removes it (and the ones after it). Adding bytes rescales values like setChannelBytes().
+// The coarse offset cannot be removed here. Grows the footprint when the offset lies beyond it.
+void setChannelOffset(fixtures::DmxMode& mode, std::size_t channelIndex, int slot, int value);
+
+// Points the channel's functions at another attribute. A channel with a single function also takes the
+// usual kind and physical range of the new attribute; DMX ranges and names are kept.
+void setChannelAttribute(fixtures::Channel& channel, fixtures::Attribute attribute);
+
+// A new channel for `attribute` with sensible defaults: 16 bit for Pan/Tilt, the geometry it usually
+// controls, a centred default position. Offsets are placeholders (appendChannel assigns them).
+fixtures::Channel newChannelFor(const fixtures::FixtureType& type, fixtures::Attribute attribute);
+
 // Stretches function ranges so that they tile 0..max without gaps or overlaps (in DMX order).
 void closeFunctionGaps(fixtures::Channel& channel);
 
 // Replaces the functions of a channel by one wheel-slot function per slot of `wheel`.
 void fillWheelFunctions(fixtures::Channel& channel, const fixtures::Wheel& wheel, fixtures::Attribute attribute);
+
+// The physical range (memory units: radians for Pan/Tilt) of the first linear function of an attribute,
+// looking through all modes. This is how the editor shows the "pan/tilt range" of a fixture.
+struct PhysicalRange {
+    float from = 0.0f;
+    float to = 0.0f;
+};
+std::optional<PhysicalRange> attributeRange(const fixtures::FixtureType& type, fixtures::Attribute attribute);
+// Sets that range on every linear function of the attribute in all modes. Returns how many changed.
+int setAttributeRange(fixtures::FixtureType& type, fixtures::Attribute attribute, float from, float to);
 
 // Adds one channel per attribute for every cell, or - with perCell = false - one channel per attribute
 // that drives the geometry group `groupName` (created from the cells; ignored when empty).

@@ -183,6 +183,63 @@ TEST_CASE("channel editing: changing the resolution rescales values") {
     CHECK(mode.footprint == 2);  // a larger footprint is kept: the user may want the spare slot
 }
 
+TEST_CASE("channel editing: coarse, fine and ultra offsets") {
+    fixtures::FixtureType type = makeTemplateFixture(FixtureTemplate::Blank);
+    fixtures::DmxMode& mode = type.modes.front();
+    mode.channels.push_back(makeChannel("Other", Attribute::Zoom, 1, 2, "Beam"));
+    mode.footprint = 2;
+
+    setChannelOffset(mode, 0, 1, 5);  // dimmer gets a fine byte at offset 5
+    CHECK(mode.channels[0].offsets == std::vector<std::uint16_t>{1, 5});
+    CHECK(mode.channels[0].functions.front().dmxTo == 65535);
+    CHECK(mode.footprint == 5);
+
+    setChannelOffset(mode, 0, 0, 3);
+    CHECK(mode.channels[0].offsets == std::vector<std::uint16_t>{3, 5});
+    setChannelOffset(mode, 0, 2, 4);
+    CHECK(mode.channels[0].offsets == std::vector<std::uint16_t>{3, 5, 4});
+    CHECK(mode.channels[0].maxValue() == 16777215u);
+
+    setChannelOffset(mode, 0, 1, 0);  // removing fine removes ultra too
+    CHECK(mode.channels[0].offsets == std::vector<std::uint16_t>{3});
+    CHECK(mode.channels[0].functions.front().dmxTo == 255);
+    setChannelOffset(mode, 0, 0, 0);  // the coarse byte stays
+    CHECK(mode.channels[0].offsets == std::vector<std::uint16_t>{3});
+}
+
+TEST_CASE("channel editing: new channels get sensible defaults") {
+    const fixtures::FixtureType type = movingHead();
+
+    const fixtures::Channel pan = newChannelFor(type, Attribute::Pan);
+    CHECK(pan.offsets.size() == 2);
+    CHECK(pan.geometry == "Yoke");
+    CHECK(pan.defaultValue == 32768u);
+    CHECK(newChannelFor(type, Attribute::Tilt).geometry == "Head");
+
+    const fixtures::Channel dimmer = newChannelFor(type, Attribute::Dimmer);
+    CHECK(dimmer.geometry == "Beam");
+    CHECK(dimmer.highlightValue == 255u);
+    CHECK(dimmer.functions.front().attribute == Attribute::Dimmer);
+    CHECK(newChannelFor(makeTemplateFixture(FixtureTemplate::Blank), Attribute::Pan).geometry.empty());
+}
+
+TEST_CASE("channel editing: changing the attribute of a channel") {
+    fixtures::Channel single = makeChannel("X", Attribute::Dimmer, 1, 1);
+    setChannelAttribute(single, Attribute::Zoom);
+    CHECK(single.functions.front().attribute == Attribute::Zoom);
+    CHECK(single.functions.front().physicalTo == doctest::Approx(degToRad(50.0f)));  // the usual zoom range
+
+    fixtures::FixtureType type = movingHead();
+    fixtures::Channel colors = *type.modes.front().findChannel("Color wheel");
+    const std::size_t count = colors.functions.size();
+    setChannelAttribute(colors, Attribute::Color2);
+    CHECK(colors.functions.size() == count);
+    for (const fixtures::ChannelFunction& f : colors.functions) {
+        CHECK(f.attribute == Attribute::Color2);
+        CHECK(f.kind == fixtures::FunctionKind::WheelSlot);  // slot functions keep their kind
+    }
+}
+
 TEST_CASE("channel editing: closing gaps between functions") {
     fixtures::Channel channel = makeChannel("Test", Attribute::Dimmer, 1, 1);
     channel.functions = {makeFunction(Attribute::Dimmer, 100, 150), makeFunction(Attribute::Focus1, 10, 40),
@@ -210,6 +267,20 @@ TEST_CASE("channel editing: one function per wheel slot") {
     CHECK(channel.functions[1].name == "Red");
     for (std::size_t i = 1; i < channel.functions.size(); ++i)
         CHECK(channel.functions[i].dmxFrom == channel.functions[i - 1].dmxTo + 1);
+}
+
+TEST_CASE("channel editing: pan and tilt range") {
+    fixtures::FixtureType type = movingHead();
+    type.modes.push_back(duplicateMode(type, type.modes.front()));
+
+    const auto pan = attributeRange(type, Attribute::Pan);
+    REQUIRE(pan.has_value());
+    CHECK(radToDeg(pan->to) == doctest::Approx(270.0f));
+
+    CHECK(setAttributeRange(type, Attribute::Pan, degToRad(-180.0f), degToRad(180.0f)) == 2);  // one per mode
+    CHECK(radToDeg(attributeRange(type, Attribute::Pan)->from) == doctest::Approx(-180.0f));
+    CHECK(radToDeg(type.modes.back().findChannel("Pan")->functions.front().physicalTo) == doctest::Approx(180.0f));
+    CHECK_FALSE(attributeRange(makeTemplateFixture(FixtureTemplate::LedPar), Attribute::Pan).has_value());
 }
 
 TEST_CASE("channel editing: channels for cells") {

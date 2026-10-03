@@ -3,6 +3,7 @@
 #include "core/Log.h"
 #include "ui/EditorContext.h"
 #include "ui/FixtureDragDrop.h"
+#include "ui/FixtureEditRequests.h"
 #include "ui/FixtureSpawner.h"
 #include "ui/PanelTitles.h"
 
@@ -50,7 +51,9 @@ void FixtureLibraryPanel::draw(EditorContext& ctx) {
     pollImportDialog(ctx);
     drawToolbar(ctx);
     drawMessages(ctx);
-    if (rowsDirty_ || knownTypeCount_ != ctx.fixtures.size()) rebuildRows(ctx);
+    // The editor can replace a type without changing the count: it bumps appliedCount().
+    if (rowsDirty_ || knownTypeCount_ != ctx.fixtures.size() || knownEditorApplies_ != FixtureEditRequests::appliedCount())
+        rebuildRows(ctx);
     drawList(ctx);
     drawDetails(ctx);
 }
@@ -106,6 +109,7 @@ void FixtureLibraryPanel::drawMessages(EditorContext& ctx) {
 void FixtureLibraryPanel::rebuildRows(EditorContext& ctx) {
     appliedSearch_ = search_;
     knownTypeCount_ = ctx.fixtures.size();
+    knownEditorApplies_ = FixtureEditRequests::appliedCount();
     rowsDirty_ = false;
 
     const std::vector<const fixtures::FixtureType*> found = ctx.fixtures.search(appliedSearch_);
@@ -258,6 +262,12 @@ void FixtureLibraryPanel::drawDetails(EditorContext& ctx) {
     if (ImGui::Button("Add to scene")) FixtureSpawner(ctx.scene, ctx.commands, ctx.selection, ctx.fixtures).addNearSelection(type->id, chosenMode(*type));
     ImGui::EndDisabled();
     ImGui::SetItemTooltip("Hangs on the selected truss, or appears above the stage. It is patched to the next free address.");
+    ImGui::SameLine();
+    if (ImGui::Button("Edit")) {
+        FixtureEditRequests::request(type->id);
+        ImGui::SetWindowFocus(kFixtureEditorTitle);  // bring the editor tab to the front
+    }
+    ImGui::SetItemTooltip("Open a copy of this fixture in the Fixture Editor");
     ImGui::EndChild();
 }
 

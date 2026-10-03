@@ -11,6 +11,7 @@
 #include "ui/FileDialogs.h"
 #include "ui/Panel.h"
 
+#include <cstdint>
 #include <filesystem>
 #include <set>
 #include <string>
@@ -49,6 +50,7 @@ private:
     char search_[128] = {};
     std::string appliedSearch_;
     std::size_t knownTypeCount_ = static_cast<std::size_t>(-1);
+    std::uint64_t knownEditorApplies_ = static_cast<std::uint64_t>(-1);
     bool rowsDirty_ = true;
     std::vector<Row> rows_;
     std::set<std::string> foldedManufacturers_;
