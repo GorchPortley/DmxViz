@@ -23,6 +23,7 @@
 #include "ui/DmxMonitorPanel.h"
 #include "ui/FixtureLibraryPanel.h"
 #include "ui/PatchPanel.h"
+#include "ui/TestConsolePanel.h"
 #include "ui/LogPanel.h"
 #include "ui/PanelTitles.h"
 #include "ui/PlaceholderPanel.h"
@@ -204,6 +205,7 @@ void App::createPanels() {
     panels_.push_back(std::make_unique<ui::PlaceholderPanel>(ui::kInspectorTitle));
     panels_.push_back(std::make_unique<ui::FixtureLibraryPanel>());
     panels_.push_back(std::make_unique<ui::PatchPanel>());
+    panels_.push_back(std::make_unique<ui::TestConsolePanel>());
     panels_.push_back(std::make_unique<ui::DmxMonitorPanel>());
     panels_.push_back(std::make_unique<ui::DmxInterfacesPanel>());
     panels_.push_back(std::make_unique<ui::LogPanel>());
