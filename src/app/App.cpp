@@ -89,6 +89,10 @@ AppOptions parseCommandLine(int argc, char** argv) {
             o.width = std::atoi(next());
         } else if (a == "--height") {
             o.height = std::atoi(next());
+        } else if (a == "--save-project") {
+            o.saveProjectPath = next();
+        } else if (a == "--verbose") {
+            log::setMinLevel(log::Level::Debug);
         } else if (a == "--test-pattern") {
             o.testPattern = true;
         } else if (!a.empty() && a[0] != '-') {
@@ -206,6 +210,7 @@ void App::loadStartupShow() {
         sceneReplaced();
     }
     if (options_.testPattern) applyTestPattern(scene_, fixtures_, dmx_);
+    if (options_.saveProjectPath) saveToFile(*options_.saveProjectPath);
     showStartView();
 }
 
@@ -264,8 +269,9 @@ void App::frame() {
     sg_commit();
 
     ++frameIndex_;
+    // Unattended runs (--frames / --screenshot) end without asking about unsaved changes.
     if (options_.exitAfterFrames > 0 && frameIndex_ >= static_cast<std::uint64_t>(options_.exitAfterFrames))
-        sapp_request_quit();
+        sapp_quit();
 }
 
 void App::event(const sapp_event* ev) {
@@ -457,11 +463,13 @@ void App::pollFileDialogs() {
 }
 
 void App::undo() {
+    log::debug("app", "undo '{}'", commands_.undoName());
     if (!commands_.undo()) return;
     selection_.prune(scene_);
 }
 
 void App::redo() {
+    log::debug("app", "redo '{}'", commands_.redoName());
     if (!commands_.redo()) return;
     selection_.prune(scene_);
 }
@@ -493,6 +501,7 @@ void App::drawUnsavedChangesDialog() {
         ImGui::OpenPopup(kTitle);
         openUnsavedDialog_ = false;
     }
+    ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     if (!ImGui::BeginPopupModal(kTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) return;
     ImGui::TextUnformatted("The project has changes that are not saved.");
     ImGui::Spacing();

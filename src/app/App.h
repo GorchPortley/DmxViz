@@ -43,6 +43,7 @@ struct AppOptions {
     int width = 1600;
     int height = 900;
     std::optional<std::filesystem::path> openFile;        // project to load at startup (default: demo show)
+    std::optional<std::filesystem::path> saveProjectPath;  // write the startup show to this file (demo shows, smoke tests)
     bool testPattern = false;                             // drive all patched fixtures on (see DemoShow.h)
     std::filesystem::path executablePath;                 // argv[0]
 };
