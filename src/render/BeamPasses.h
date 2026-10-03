@@ -1,7 +1,7 @@
 #pragma once
 // Passes that draw the light in the air:
-//   3a. half-res depth (min/max of each 2x2 block)       depth_downsample.glsl
-//   3b. volumetric beams, half res, one instanced draw   volumetric.glsl
+//   3a. reduced-res depth (min/max of each block)        depth_downsample.glsl
+//   3b. volumetric beams, half/quarter res, one draw     volumetric.glsl
 //   3c. depth-aware upsample into the HDR target          upsample.glsl
 //   4.  lens glow sprites, one instanced draw              lens_glow.glsl
 

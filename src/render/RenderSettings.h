@@ -12,12 +12,20 @@ enum class Tonemapper {
     AcesPerChannel,     // classic per-channel ACES fit (bright colours drift to white)
 };
 
+// Size of the volumetric beam target relative to the viewport. The haze pass shades every pixel of every
+// beam hull, so its cost is proportional to the number of volume pixels: quarter = 4x cheaper than half.
+enum class VolumetricResolution {
+    Half,     // 1/2 width and height (default)
+    Quarter,  // 1/4 width and height: for slow GPUs and very large rigs, softer haze
+};
+
 struct RenderSettings {
     // --- volumetric beams ---------------------------------------------------------
     bool volumetrics = true;
+    VolumetricResolution volumetricResolution = VolumetricResolution::Half;
     int minMarchSteps = 6;          // per beam per pixel; small/distant beams use the minimum
     int maxMarchSteps = 20;         // upper bound for beams that cover a lot of the screen
-    float marchPixelsPerStep = 6.0f;// one step per this many half-res pixels of on-screen beam length
+    float marchPixelsPerStep = 6.0f;  // one step per this many volume-target pixels of on-screen beam length
     float hazePhaseG = 0.7f;        // forward lobe of the haze phase function (Henyey-Greenstein g, 0..0.95);
                                     // 30 % of the scattering is isotropic on top of it
 

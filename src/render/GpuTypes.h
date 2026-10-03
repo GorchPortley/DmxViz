@@ -17,11 +17,12 @@ struct FrameGpu {
     glm::vec4 cameraPos{0.0f};    // xyz = position (m), w = animation time (s)
     glm::vec4 cameraForward{0.0f};// xyz = unit view direction, w = focal length in full-res pixels
     glm::vec4 viewport{0.0f};     // full res: width, height, 1/width, 1/height
-    glm::vec4 halfViewport{0.0f}; // half res: width, height, 1/width, 1/height
+    glm::vec4 volumeViewport{0.0f};  // volumetric target (half or quarter res): width, height, 1/w, 1/h
     glm::vec4 haze{0.0f};         // x = scattering (1/m), y = density variation, z = beam brightness, w = phase g
     glm::vec4 ambientExposure{0.0f}; // rgb = ambient light (HDR units), w = exposure
     glm::vec4 params{0.0f};       // x = HDR units per nit, y = frame counter, z = min steps, w = max steps
-    glm::vec4 params2{0.0f};      // x = clip beams at floor, y = bloom strength, z = pixels per march step, w = 0
+    glm::vec4 params2{0.0f};      // x = clip beams at floor, y = bloom strength, z = volume pixels per march step,
+                                  // w = volume resolution divisor (2 or 4)
 };
 static_assert(sizeof(FrameGpu) % 16 == 0);
 

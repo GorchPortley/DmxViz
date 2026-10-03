@@ -39,6 +39,10 @@ SandboxOptions parseSandboxOptions(int argc, char** argv) {
             o.startTime = std::atof(next());
         } else if (a == "--no-ui") {
             o.showUi = false;
+        } else if (a == "--no-volumetrics") {
+            o.volumetrics = false;
+        } else if (a == "--vol-res") {
+            o.quarterResVolumetrics = std::string_view(next()) == "quarter";
         } else if (a == "--width") {
             o.width = std::atoi(next());
         } else if (a == "--height") {
@@ -63,6 +67,9 @@ void SandboxApp::init() {
     ImGui::GetIO().IniFilename = nullptr;
 
     if (!renderer_.init()) log::error("sandbox", "renderer failed to initialise");
+    render::RenderSettings& settings = renderer_.settings();
+    settings.volumetrics = options_.volumetrics;
+    if (options_.quarterResVolumetrics) settings.volumetricResolution = render::VolumetricResolution::Quarter;
     viewport_ = std::make_unique<render::ViewportTarget>();
 
     DemoStage::Rig rig = DemoStage::Rig::Show;
@@ -157,6 +164,12 @@ void SandboxApp::frame() {
     sg_commit();
 
     cpuFrameMs_ = stm_ms(stm_since(frameStart));
+    if (frameIndex_ > 0) {
+        cpuFrameMsSum_ += cpuFrameMs_;
+        sceneMsSum_ += sceneMs;
+        renderMsSum_ += renderMs;
+        ++timedFrames_;
+    }
     ++frameIndex_;
     if (options_.frames > 0 && frameIndex_ >= static_cast<std::uint64_t>(options_.frames)) sapp_request_quit();
 }
@@ -199,6 +212,16 @@ void SandboxApp::event(const sapp_event* ev) {
 }
 
 void SandboxApp::cleanup() {
+    if (timedFrames_ > 0) {
+        const double n = static_cast<double>(timedFrames_);
+        const render::RenderStats& s = renderer_.stats();
+        // Under a software rasteriser (xvfb + llvmpipe) "render record" contains the GPU work too.
+        log::info("sandbox",
+                  "{} frames timed: CPU frame {:.2f} ms avg (scene {:.2f}, render record {:.2f}); {} beams -> {} "
+                  "instances, {} draw calls",
+                  timedFrames_, cpuFrameMsSum_ / n, sceneMsSum_ / n, renderMsSum_ / n, s.beams, s.beamInstances,
+                  s.drawCalls);
+    }
     viewport_.reset();
     renderer_.shutdown();
     simgui_shutdown();

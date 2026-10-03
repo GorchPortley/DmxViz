@@ -5,7 +5,7 @@
 //
 //   render_sandbox [--screenshot out.png] [--frames N] [--beams N] [--haze x]
 //                  [--camera front|side|top|audience|close] [--rig show|single|stress]
-//                  [--time seconds] [--no-ui]
+//                  [--time seconds] [--no-ui] [--vol-res half|quarter] [--no-volumetrics]
 
 #include "DemoStage.h"
 #include "assets/AssetLibrary.h"
@@ -29,6 +29,8 @@ struct SandboxOptions {
     std::string camera = "front";
     double startTime = 2.0;   // animation time of the first frame (s)
     bool showUi = true;
+    bool volumetrics = true;
+    bool quarterResVolumetrics = false;
     int width = 1600;
     int height = 900;
 };
@@ -59,6 +61,10 @@ private:
     std::uint64_t frameIndex_ = 0;
     std::uint64_t lastFrameTicks_ = 0;
     double cpuFrameMs_ = 0.0;
+    double cpuFrameMsSum_ = 0.0;  // frames after the first (which compiles shaders and bakes gobos)
+    double sceneMsSum_ = 0.0;
+    double renderMsSum_ = 0.0;
+    int timedFrames_ = 0;
     double time_ = 0.0;
     bool animate_ = true;
     float orbit_ = 0.0f;  // extra camera yaw from mouse drag (radians)
