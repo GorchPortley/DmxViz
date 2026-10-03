@@ -32,6 +32,7 @@ void ensureDefaultDockLayout(unsigned int dockspaceId, bool force) {
     ImGui::DockBuilderDockWindow(kFixtureLibraryTitle, left);
     ImGui::DockBuilderDockWindow(kInspectorTitle, right);
     ImGui::DockBuilderDockWindow(kDmxMonitorTitle, bottom);
+    ImGui::DockBuilderDockWindow(kPatchTitle, bottom);
     ImGui::DockBuilderDockWindow(kLogTitle, bottom);
     ImGui::DockBuilderDockWindow(kViewportTitle, rest);
     ImGui::DockBuilderFinish(dockspaceId);
