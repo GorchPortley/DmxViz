@@ -67,18 +67,26 @@ The development container has no GPU (llvmpipe), so these are estimates for 1920
 |------|-----------------|----------|
 | G-buffer | mesh instances (2.5k) and 24 B/pixel written | about 1 ms |
 | Spot lighting | surface pixels inside beams (hull back faces that pass the depth test) x ~200 ALU and a 16 B blend | 1 - 2 ms |
-| Haze march | **covered volume pixels x (80 + steps x 130) flops**, at about 1.5 TFLOP/s effective | 8 ms half res / 2.5 ms quarter res, reference rig |
+| Haze march | **covered volume pixels x (80 + steps x 200) flops**, at about 1.5 TFLOP/s effective | see below |
 | Haze depth + upsample | volume pixels x block taps; full-res pixels x 9 taps | 0.3 - 0.4 ms |
 | Lens glow | sprite area (1000 small quads) | under 0.3 ms |
 | Bloom + composite | full-res and half-res pixels | about 0.5 ms |
 
 The haze march dominates, which is why it has the most controls. `BeamPacker` estimates the pixels every beam covers
 (`hullCoveragePixels`: side-on trapezoid blended with the far disc by viewing angle, capped at the target size). For
-the reference rig and a front-of-house camera this is about 25 million volume pixels at half res (overdraw included,
-a pessimistic bound because depth and floor clipping and overlap are ignored), roughly 6 million at quarter res.
-Worked example for the half-res case with the 3-step cap: 25 M x (80 + 3 x 130) flops = 12 GFLOP, 8 ms. At quarter
-res the budget allows about 4 steps: 6 M x (80 + 4 x 130) = 3.6 GFLOP, 2.4 ms. Together with the other passes that
-is about 12 ms at half res (inside 16.7 ms, but with little room) and 6 ms at quarter res.
+the sim_bench rig and a front-of-house camera this is about 26 million volume pixels at half res (overdraw included;
+a pessimistic bound, because the depth and floor clipping that discards fragments before the march is ignored) and
+about 6.5 million at quarter res. Plugging that into the model for the pessimistic coverage:
+
+| Haze setting | Steps | Haze march | Whole frame |
+|--------------|------:|-----------:|------------:|
+| half res, automatic quality off, budget 150 | 5.8 | about 20 ms | about 25 ms |
+| half res, steps at the 3-step floor | 3 | about 12 ms | about 17 ms |
+| quarter res (automatic quality level 3) | 3 | about 3 ms | about 8 ms |
+
+So by this model the reference rig is at the edge of 60 fps at half res on a GTX 1060 and well inside it at quarter
+res; the automatic quality exists to find that out on the actual machine. Real overdraw is lower than the estimate,
+and a rig of 1000 narrow pixel beams costs far less than 1000 wide moving heads.
 
 ### Cost controls of the haze pass
 
@@ -93,15 +101,17 @@ Added in this pass:
 
 * **Haze resolution** (`RenderSettings::volumetricResolution`): half (default) or quarter. Quarter is about 4x
   cheaper and softer. The depth min/max pass and the bilateral upsample handle the 4x4 blocks.
-* **Cost budget** (`volumetricBudget`, millions of volume pixel x march step per view, default 24 = about 5 ms on a
-  GTX 1060): when the estimated coverage x steps exceeds it, `BeamPacker::marchStepCap()` lowers the step cap, down
-  to 3 steps (below `minMarchSteps`). `RenderStats` reports divisor, cap and coverage.
+* **Cost budget** (`volumetricBudget`, millions of volume pixel x march step per view, default 150 = about 15 ms on a
+  GTX 1060 by the model): when the estimated coverage x steps exceeds it, `BeamPacker::marchStepCap()` lowers the
+  step cap, down to 3 steps (below `minMarchSteps`). It is a safety net: a normal show stays far below it, so the
+  default look is unchanged (the sandbox demo renders pixel-identical). `RenderStats` reports divisor, cap, coverage.
 * **Automatic quality** (`autoQuality`, `targetFrameMs`; `AutoQuality.h`): watches the time between presented
-  frames; while the smoothed frame time is over the target it steps down through level 1 (steps x 0.65), 2 (x 0.4),
-  3 (quarter res, x 0.65) and 4 (quarter res, x 0.4). With vsync a low frame time cannot show headroom, so after 5 s
-  at a reduced level it probes one level up and keeps it if the frames hold; failed probes back off (10, 20, ... 60
-  s). The user's settings are never modified, the renderer works on an adjusted copy. Off by default so that
-  screenshots stay reproducible. Stalls above 250 ms (window drag, shader compile) are ignored.
+  frames; while the smoothed frame time is over the target it steps down through level 1 (steps x 0.65, budget x
+  0.5), 2 (x 0.4, x 0.25), 3 (quarter res, x 0.65, x 0.15) and 4 (quarter res, x 0.4, x 0.08). With vsync a low
+  frame time cannot show headroom, so after 5 s at a reduced level it probes one level up and keeps it if the frames
+  hold; failed probes back off (10, 20, ... 60 s). The user's settings are never modified, the renderer works on an
+  adjusted copy. Off by default so that screenshots stay reproducible. Stalls above 250 ms (window drag, shader
+  compile) are ignored, which also means it does nothing under a software rasteriser.
 
 ### Tunables
 
@@ -111,7 +121,7 @@ Added in this pass:
 | `volumetricResolution` | half | Quarter: 4x fewer haze pixels |
 | `minMarchSteps` / `maxMarchSteps` | 6 / 20 | Per-pixel step range |
 | `marchPixelsPerStep` | 6 | Larger = fewer steps on long beams |
-| `volumetricBudget` | 24 | Millions of (pixel x step) per frame, 0 = unlimited |
+| `volumetricBudget` | 150 | Millions of (pixel x step) per frame, 0 = unlimited |
 | `autoQuality` / `targetFrameMs` | off / 16.7 | Automatic quality and its frame time target |
 | `maxBeamLength`, `minIlluminance` | 60 m, 0.5 lx | Shorter hulls mean fewer covered pixels |
 | `lensGlow`, `bloom` | on | Cheap, but they can be switched off |

@@ -9,11 +9,12 @@
 // back off (5 s, 10 s ... 60 s) so a scene that is simply too heavy does not flicker every few seconds.
 //
 // Levels (0 = exactly what the user configured):
-//   0  configured resolution and steps
-//   1  steps x 0.65
-//   2  steps x 0.4
-//   3  quarter-resolution haze, steps x 0.65
-//   4  quarter-resolution haze, steps x 0.4
+//   level  resolution  steps   cost budget
+//   0      configured  x 1      x 1       (exactly what the user configured)
+//   1      configured  x 0.65   x 0.5
+//   2      configured  x 0.4    x 0.25
+//   3      quarter     x 0.65   x 0.15
+//   4      quarter     x 0.4    x 0.08
 // A user who already chose quarter resolution only has levels 0 to 2.
 
 #include "render/RenderSettings.h"

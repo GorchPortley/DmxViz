@@ -4,6 +4,10 @@
 #include <cstdlib>
 #include <new>
 
+#ifdef _WIN32
+#include <malloc.h>  // _aligned_malloc
+#endif
+
 namespace {
 
 std::atomic<std::uint64_t> gCount{0};

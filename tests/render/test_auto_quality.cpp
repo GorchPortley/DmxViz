@@ -77,6 +77,7 @@ TEST_CASE("auto quality: the level changes the settings, the user's settings sta
     CHECK(low.maxMarchSteps == 16);  // 40 * 0.4
     CHECK(low.minMarchSteps == 4);   // 10 * 0.4
     CHECK(low.maxMarchSteps >= low.minMarchSteps);
+    CHECK(low.volumetricBudget < user.volumetricBudget * 0.1f);
     CHECK(user.maxMarchSteps == 40);
     CHECK(user.volumetricResolution == VolumetricResolution::Half);
 }

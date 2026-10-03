@@ -17,8 +17,10 @@ constexpr int kProbeFrames = 45;          // how long a trial level has to hold
 constexpr float kFirstProbeSeconds = 5.0f;
 constexpr float kMaxProbeSeconds = 60.0f;
 
-// Step count multiplier of every level.
+// Multipliers of every level: for the step counts, and for the cost budget (which is what actually lowers the
+// cost when many beams are on screen and the step counts sit at their floor).
 constexpr float kStepScale[AutoQuality::kMaxLevel + 1] = {1.0f, 0.65f, 0.4f, 0.65f, 0.4f};
+constexpr float kBudgetScale[AutoQuality::kMaxLevel + 1] = {1.0f, 0.5f, 0.25f, 0.15f, 0.08f};
 constexpr int kFirstQuarterLevel = 3;
 
 int maxLevelFor(const RenderSettings& settings) {
@@ -94,6 +96,7 @@ RenderSettings AutoQuality::apply(const RenderSettings& user) const {
     s.minMarchSteps = std::max(2, static_cast<int>(std::lround(static_cast<float>(user.minMarchSteps) * scale)));
     s.maxMarchSteps =
         std::max(s.minMarchSteps, static_cast<int>(std::lround(static_cast<float>(user.maxMarchSteps) * scale)));
+    s.volumetricBudget = user.volumetricBudget * kBudgetScale[level];
     if (level >= kFirstQuarterLevel) s.volumetricResolution = VolumetricResolution::Quarter;
     return s;
 }

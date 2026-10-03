@@ -26,9 +26,10 @@ struct RenderSettings {
     int minMarchSteps = 6;          // per beam per pixel; small/distant beams use the minimum
     int maxMarchSteps = 20;         // upper bound for beams that cover a lot of the screen
     float marchPixelsPerStep = 6.0f;  // one step per this many volume-target pixels of on-screen beam length
-    float volumetricBudget = 24.0f;  // cost cap in millions of (volume pixel x march step) per view and frame; when the
-                                     // beams on screen would cost more, the step counts shrink (down to 3, even
-                                     // below minMarchSteps; 0 = no cap). About 5 ms of haze on a GTX 1060.
+    float volumetricBudget = 150.0f;  // safety net against pathological rigs: cost cap in millions of (volume pixel x
+                                      // march step) per view and frame. Above it the step counts shrink (down to 3,
+                                      // even below minMarchSteps; 0 = no cap). Ordinary scenes stay far below it; the
+                                      // automatic quality scales it down (about 15 ms of haze on a GTX 1060).
     float hazePhaseG = 0.7f;        // forward lobe of the haze phase function (Henyey-Greenstein g, 0..0.95);
                                     // 30 % of the scattering is isotropic on top of it
 
