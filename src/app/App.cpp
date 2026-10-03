@@ -24,6 +24,7 @@
 #include "ui/OutlinerPanel.h"
 #include "ui/PanelTitles.h"
 #include "ui/PlaceholderPanel.h"
+#include "ui/StageMenu.h"
 #include "ui/Theme.h"
 
 #include "sokol_app.h"
@@ -345,6 +346,7 @@ void App::drawMainMenu() {
         if (ImGui::MenuItem(redoLabel.c_str(), "Ctrl+Y", false, commands_.canRedo())) redo();
         ImGui::EndMenu();
     }
+    ui::drawStageMenu(*context_);  // "Add" and "Tools"
     if (ImGui::BeginMenu("View")) {
         for (const std::unique_ptr<ui::Panel>& panel : panels_) ImGui::MenuItem(panel->title(), nullptr, &panel->open);
         ImGui::Separator();
