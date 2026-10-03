@@ -14,4 +14,5 @@ target_compile_definitions(dmxviz_tests PRIVATE
     DMXVIZ_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data"
     DMXVIZ_DATA_DIR="${PROJECT_SOURCE_DIR}/data")
 dmxviz_set_warnings(dmxviz_tests)
-add_test(NAME dmxviz_tests COMMAND dmxviz_tests)
+add_test(NAME dmxviz_tests COMMAND dmxviz_tests --duration=true)
+set_tests_properties(dmxviz_tests PROPERTIES TIMEOUT 240)

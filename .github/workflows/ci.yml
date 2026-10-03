@@ -51,7 +51,8 @@ jobs:
           grep -E "(error|warning) C[0-9]+:|error:|warning:" build.log | sed -E 's/ \[[^]]*\]$//' | sort -u | head -60 || true
 
       - name: Unit tests
-        run: ctest --test-dir build -C RelWithDebInfo --output-on-failure
+        timeout-minutes: 5
+        run: ctest --test-dir build -C RelWithDebInfo --output-on-failure --timeout 240
 
       - name: Smoke test (headless screenshot)
         if: runner.os == 'Linux'
