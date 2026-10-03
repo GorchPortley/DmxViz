@@ -54,6 +54,14 @@ jobs:
         timeout-minutes: 5
         run: ctest --test-dir build -C RelWithDebInfo --output-on-failure --timeout 240
 
+      - name: Test failure summary
+        if: failure()
+        shell: bash
+        run: |
+          exe=$(find build/tests -name 'dmxviz_tests*' -type f \( -name '*.exe' -o -perm -u+x \) | head -1)
+          echo "==== failing checks ===="
+          timeout 240 "$exe" --no-intro 2>&1 | grep -E -A7 "ERROR:|FATAL ERROR" | grep -vE "^\[ *[0-9.]+\] " | head -150 || true
+
       - name: Smoke test (headless screenshot)
         if: runner.os == 'Linux'
         run: |
