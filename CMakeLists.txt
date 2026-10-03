@@ -30,9 +30,14 @@ add_subdirectory(src/dmx)
 add_subdirectory(src/fixtures)
 add_subdirectory(src/stage)
 
-if(DMXVIZ_BUILD_APP)
+# render and ui are plain static libraries; the tests link ui (headless view-model code), so they are
+# built whenever either the app or the tests are.
+if(DMXVIZ_BUILD_APP OR DMXVIZ_BUILD_TESTS)
     add_subdirectory(src/render)
     add_subdirectory(src/ui)
+endif()
+
+if(DMXVIZ_BUILD_APP)
     add_subdirectory(src/app)
     if(EXISTS "${PROJECT_SOURCE_DIR}/tools/CMakeLists.txt")
         add_subdirectory(tools)
